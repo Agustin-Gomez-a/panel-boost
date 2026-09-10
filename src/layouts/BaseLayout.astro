@@ -1,0 +1,118 @@
+---
+import '../styles/global.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  noIndex?: boolean;
+}
+
+const {
+  title = 'Pulse Panel Boost — SMM Panel Profesional',
+  description = 'Impulsa tus redes sociales con servicios premium de seguidores, likes y engagement. Panel SMM rápido, seguro y confiable para Instagram, TikTok, YouTube y más.',
+  image = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=1200&q=80',
+  noIndex = false,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, import.meta.env.SITE_URL || 'http://localhost:4321');
+---
+
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Primary Meta -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    {noIndex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:site_name" content="Pulse Panel Boost" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+
+    <!-- Schema.org -->
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Pulse Panel Boost",
+      "url": canonicalURL.origin,
+      "description": description,
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": `${canonicalURL.origin}/search?q={search_term_string}`,
+        "query-input": "required name=search_term_string"
+      }
+    })} />
+
+    <!-- Google Fonts: Inter & Manrope -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <slot />
+
+    <!-- Theme Toggle Script -->
+    <script is:inline>
+      (function () {
+        const stored = localStorage.getItem('ppb-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('ppb-theme', next);
+        updateThemeVisuals(next);
+      }
+
+      function updateThemeVisuals(theme) {
+        // Update all theme icons
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+          icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        // Toggle logos
+        document.querySelectorAll('.logo-dark').forEach(el => {
+          el.style.display = theme === 'dark' ? 'block' : 'none';
+        });
+        document.querySelectorAll('.logo-light').forEach(el => {
+          el.style.display = theme === 'light' ? 'block' : 'none';
+        });
+      }
+
+      // Init visuals on page load
+      updateThemeVisuals(document.documentElement.getAttribute('data-theme') || 'dark');
+
+      window.toggleTheme = toggleTheme;
+
+      // Mobile menu
+      function toggleMobileMenu() {
+        const nav = document.getElementById('navbar-nav');
+        if (nav) nav.classList.toggle('open');
+      }
+      window.toggleMobileMenu = toggleMobileMenu;
+    </script>
+  </body>
+</html>

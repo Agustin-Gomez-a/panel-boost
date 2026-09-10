@@ -1,0 +1,1163 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionFromCookies } from '../lib/auth';
+
+const session = await getSessionFromCookies(Astro.cookies);
+---
+
+<BaseLayout
+  title="Pulse Panel Boost — Impulsa tus Redes Sociales"
+  description="El panel SMM profesional para crecer en Instagram, TikTok, YouTube y más. Seguidores reales, entrega rápida y precios competitivos. ¡Empezá hoy!"
+>
+  <!-- ===== NAVBAR ===== -->
+  <header class="navbar">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="Pulse Panel Boost - Inicio">
+          <img src="/img/logo1.png" alt="Pulse Panel Boost Logo" class="logo-dark" style="height: 56px; width: auto;" />
+          <img src="/img/logo2light.png" alt="Pulse Panel Boost Logo" class="logo-light" style="height: 56px; width: auto; display:none;" />
+        </a>
+
+        <ul class="navbar__nav" id="navbar-nav" role="navigation" aria-label="Navegación principal">
+          <li><a href="#features">Características</a></li>
+          <li><a href="#networks">Redes</a></li>
+          <li><a href="#process">Cómo Funciona</a></li>
+          <li><a href="#pricing">Precios</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+
+        <div class="navbar__actions">
+          <button
+            id="theme-toggle-btn"
+            class="theme-toggle"
+            onclick="toggleTheme()"
+            aria-label="Cambiar tema"
+            title="Cambiar tema claro/oscuro"
+          >
+            <i id="theme-icon" class="fa-solid fa-sun"></i>
+          </button>
+
+          {session ? (
+            <a href="/dashboard" class="btn btn--primary btn--sm" id="nav-dashboard-btn" style="gap:0.5rem;display:flex;align-items:center;">
+              <i class="fa-solid fa-user"></i>
+              <span style="display:none;" class="desktop-only">Panel de {session.name.split(' ')[0]}</span>
+              <span class="mobile-only">Panel</span>
+            </a>
+          ) : (
+            <>
+              <a href="/login" class="btn btn--ghost btn--sm" id="nav-login-btn">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                Login
+              </a>
+              <a href="/register" class="btn btn--primary btn--sm" id="nav-register-btn">
+                Registrate Gratis
+              </a>
+            </>
+          )}
+
+          <button
+            class="mobile-menu-btn"
+            onclick="toggleMobileMenu()"
+            aria-label="Menú"
+            aria-expanded="false"
+          >
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero" id="hero" aria-labelledby="hero-title" style="min-height: 100vh; display: flex; align-items: center; position: relative; margin-top: -80px; padding-top: 80px;">
+    <!-- Hero background images per theme -->
+    <div class="hero-bg hero-bg--dark" style="position:absolute; inset:0; background: url('/img/hero2.png') center right / cover no-repeat; z-index: 0;"></div>
+    <div class="hero-bg hero-bg--light" style="position:absolute; inset:0; background: url('/img/hero3.png') center right / cover no-repeat; z-index: 0; display:none;"></div>
+    <!-- Dark overlay -->
+    <div class="hero-overlay" style="position:absolute; inset:0; z-index: 0;"></div>
+    
+    <!-- Particles -->
+    <div class="particles-container" aria-hidden="true" id="particles-container" style="z-index: 1;"></div>
+
+    <div class="container" style="position: relative; z-index: 2; width: 100%;">
+      <div class="hero__layout" style="display: block;">
+        <!-- Left: Content -->
+        <div class="hero__content" style="max-width: 600px;">
+          <div class="hero__tag animate-fade-up">
+            <span class="section-tag">
+              <i class="fa-solid fa-rocket"></i>
+              Plataforma SMM #1 en Latam
+            </span>
+          </div>
+
+          <h1 class="hero__title animate-fade-up animate-fade-up-delay-1" id="hero-title">
+            Hacé crecer tus<br />
+            <span class="gradient-text">redes sociales</span><br />
+            al siguiente nivel
+          </h1>
+
+          <p class="hero__subtitle animate-fade-up animate-fade-up-delay-2">
+            Impulsa tu presencia digital con servicios premium de seguidores, likes y
+            engagement. Entrega rápida, precios competitivos y soporte 24/7.
+          </p>
+
+          <div class="hero__actions animate-fade-up animate-fade-up-delay-3">
+            <a href="/register" class="btn btn--primary btn--lg" id="hero-cta-primary">
+              <i class="fa-solid fa-rocket"></i>
+              Empezá Gratis Ahora
+            </a>
+          </div>
+
+          <div class="hero__badges animate-fade-up animate-fade-up-delay-4">
+            <span class="hero__badge">
+              <i class="fa-solid fa-circle-check"></i>
+              Entrega garantizada
+            </span>
+            <span class="hero__badge">
+              <i class="fa-solid fa-circle-check"></i>
+              Sin contraseña requerida
+            </span>
+            <span class="hero__badge">
+              <i class="fa-solid fa-circle-check"></i>
+              Pago seguro
+            </span>
+            <span class="hero__badge">
+              <i class="fa-solid fa-circle-check"></i>
+              Soporte 24/7
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REDES SOCIALES ===== -->
+  <section id="networks" aria-labelledby="networks-title" style="position: relative; overflow: hidden; padding: 5rem 0;">
+    <div class="section-bg section-bg--networks-dark" style="position:absolute; inset:0; background: url('/img/Todas%20tus%20redes-dark.png') center / cover no-repeat; z-index: 0;"></div>
+    <div class="section-bg section-bg--networks-light" style="position:absolute; inset:0; background: url('/img/Todas%20tus%20redes-light.png') center / cover no-repeat; z-index: 0; display:none;"></div>
+    <div class="container" style="position: relative; z-index: 1;">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-share-nodes"></i>
+          Plataformas soportadas
+        </div>
+        <h2 id="networks-title">Todas tus redes, <span class="gradient-text">un solo panel</span></h2>
+        <p>Gestioná el crecimiento de todas tus plataformas desde un único lugar. Rápido, simple y efectivo.</p>
+      </div>
+
+      <div class="network-grid" role="list" aria-label="Redes sociales soportadas">
+        <div class="network-icon network-icon--instagram" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+          </div>
+          <span>Instagram</span>
+        </div>
+        <div class="network-icon network-icon--tiktok" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+          </div>
+          <span>TikTok</span>
+        </div>
+        <div class="network-icon network-icon--youtube" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-youtube" aria-hidden="true"></i>
+          </div>
+          <span>YouTube</span>
+        </div>
+        <div class="network-icon network-icon--twitter" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+          </div>
+          <span>X / Twitter</span>
+        </div>
+        <div class="network-icon network-icon--facebook" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+          </div>
+          <span>Facebook</span>
+        </div>
+        <div class="network-icon network-icon--spotify" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-spotify" aria-hidden="true"></i>
+          </div>
+          <span>Spotify</span>
+        </div>
+        <div class="network-icon network-icon--twitch" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-twitch" aria-hidden="true"></i>
+          </div>
+          <span>Twitch</span>
+        </div>
+        <div class="network-icon network-icon--telegram" role="listitem">
+          <div class="network-icon__circle">
+            <i class="fa-brands fa-telegram" aria-hidden="true"></i>
+          </div>
+          <span>Telegram</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURES ===== -->
+  <section id="features" aria-labelledby="features-title" style="position: relative; overflow: hidden; padding: 5rem 0;">
+    <div class="section-bg section-bg--features-dark" style="position:absolute; inset:0; background: url('/img/caractdark.png') center / cover no-repeat; z-index: 0;"></div>
+    <div class="section-bg section-bg--features-light" style="position:absolute; inset:0; background: url('/img/caractlight.png') center / cover no-repeat; z-index: 0; display:none;"></div>
+    <div class="container" style="position: relative; z-index: 1;">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-star"></i>
+          Por qué elegirnos
+        </div>
+        <h2 id="features-title">Características <span class="gradient-text">que importan</span></h2>
+        <p>No somos un panel más. Somos tu herramienta de crecimiento digital definitiva.</p>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card" aria-label="Entrega Ultra Rápida">
+          <div class="feature-card__icon feature-card__icon--accent">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          </div>
+          <h3>Entrega Ultra Rápida</h3>
+          <p>Los pedidos comienzan a procesarse en minutos. Sin esperas innecesarias. Tu crecimiento no puede esperar.</p>
+        </article>
+
+        <article class="feature-card" aria-label="100% Seguro">
+          <div class="feature-card__icon feature-card__icon--cyan">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          </div>
+          <h3>100% Seguro</h3>
+          <p>No pedimos tu contraseña. Solo necesitamos el enlace público. Tu cuenta siempre está protegida.</p>
+        </article>
+
+        <article class="feature-card" aria-label="Precios Competitivos">
+          <div class="feature-card__icon feature-card__icon--success">
+            <i class="fa-solid fa-dollar-sign" aria-hidden="true"></i>
+          </div>
+          <h3>Precios Competitivos</h3>
+          <p>Los mejores precios del mercado con calidad premium. Más por menos. Planes para todos los presupuestos.</p>
+        </article>
+
+        <article class="feature-card" aria-label="Soporte 24/7">
+          <div class="feature-card__icon feature-card__icon--warning">
+            <i class="fa-solid fa-headset" aria-hidden="true"></i>
+          </div>
+          <h3>Soporte 24/7</h3>
+          <p>Nuestro equipo está disponible todo el día, todos los días. Cualquier problema, lo resolvemos al instante.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PROCESS ===== -->
+  <section id="process" aria-labelledby="process-title">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-route"></i>
+          Proceso simple
+        </div>
+        <h2 id="process-title">Empezá a crecer en <span class="gradient-text">4 pasos</span></h2>
+        <p>Sin complicaciones. En menos de 5 minutos ya podés tener tu primer pedido activo.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number" aria-hidden="true">1</div>
+          <h3 style="font-size:1rem;margin-bottom:0.5rem;">Creá tu cuenta</h3>
+          <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;">
+            Registrate gratis en menos de 1 minuto. Solo necesitás tu email y una contraseña.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number" aria-hidden="true">2</div>
+          <h3 style="font-size:1rem;margin-bottom:0.5rem;">Elegí un servicio</h3>
+          <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;">
+            Explorá cientos de servicios para todas las redes. Filtrá por plataforma y categoría.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number" aria-hidden="true">3</div>
+          <h3 style="font-size:1rem;margin-bottom:0.5rem;">Colocá tu pedido</h3>
+          <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;">
+            Ingresá el link de tu perfil o publicación y la cantidad que necesitás.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number" aria-hidden="true">4</div>
+          <h3 style="font-size:1rem;margin-bottom:0.5rem;">¡Listo, crecé!</h3>
+          <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;">
+            Recibí tu pedido rápidamente. Monitoreá el progreso desde tu dashboard en tiempo real.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRICING ===== -->
+  <section id="pricing" aria-labelledby="pricing-title">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-tag"></i>
+          Servicios y Precios
+        </div>
+        <h2 id="pricing-title">Precios <span class="gradient-text">transparentes</span></h2>
+        <p>Sin costos ocultos. Elegí la cantidad que necesitás y pagá solo por lo que usás.</p>
+      </div>
+
+      <div class="pricing-tabs" id="pricing-tabs" role="tablist" aria-label="Categorías de servicios">
+        <button class="pricing-tab active" role="tab" aria-selected="true" data-tab="instagram" id="tab-instagram">
+          <i class="fa-brands fa-instagram"></i> Instagram
+        </button>
+        <button class="pricing-tab" role="tab" aria-selected="false" data-tab="tiktok" id="tab-tiktok">
+          <i class="fa-brands fa-tiktok"></i> TikTok
+        </button>
+        <button class="pricing-tab" role="tab" aria-selected="false" data-tab="youtube" id="tab-youtube">
+          <i class="fa-brands fa-youtube"></i> YouTube
+        </button>
+        <button class="pricing-tab" role="tab" aria-selected="false" data-tab="facebook" id="tab-facebook">
+          <i class="fa-brands fa-facebook-f"></i> Facebook
+        </button>
+      </div>
+
+      <!-- Instagram -->
+      <div class="pricing-panel active" id="panel-instagram" role="tabpanel" aria-labelledby="tab-instagram">
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-instagram" style="color:#E1306C;"></i>
+                <span>Instagram</span>
+              </div>
+              <h3>Seguidores</h3>
+              <p>Seguidores reales de alta calidad para tu perfil</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>100 seguidores</span>
+                <span class="pricing-row__price">$0.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>500 seguidores</span>
+                <span class="pricing-row__price">$3.49</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>1,000 seguidores <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$5.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 seguidores</span>
+                <span class="pricing-row__price">$24.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>10,000 seguidores</span>
+                <span class="pricing-row__price">$44.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="ig-followers-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-instagram" style="color:#E1306C;"></i>
+                <span>Instagram</span>
+              </div>
+              <h3>Likes</h3>
+              <p>Aumentá el engagement de tus publicaciones</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>100 likes</span>
+                <span class="pricing-row__price">$0.49</span>
+              </div>
+              <div class="pricing-row">
+                <span>500 likes</span>
+                <span class="pricing-row__price">$1.99</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>1,000 likes <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$3.49</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 likes</span>
+                <span class="pricing-row__price">$14.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>10,000 likes</span>
+                <span class="pricing-row__price">$26.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="ig-likes-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-instagram" style="color:#E1306C;"></i>
+                <span>Instagram</span>
+              </div>
+              <h3>Views (Reels)</h3>
+              <p>Más reproducciones para tus Reels e historias</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>1,000 views</span>
+                <span class="pricing-row__price">$0.29</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 views</span>
+                <span class="pricing-row__price">$1.19</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>10,000 views <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$1.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>50,000 views</span>
+                <span class="pricing-row__price">$7.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>100,000 views</span>
+                <span class="pricing-row__price">$13.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="ig-views-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- TikTok -->
+      <div class="pricing-panel" id="panel-tiktok" role="tabpanel" aria-labelledby="tab-tiktok">
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-tiktok"></i>
+                <span>TikTok</span>
+              </div>
+              <h3>Seguidores</h3>
+              <p>Seguidores de calidad para tu cuenta TikTok</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>100 seguidores</span>
+                <span class="pricing-row__price">$0.79</span>
+              </div>
+              <div class="pricing-row">
+                <span>500 seguidores</span>
+                <span class="pricing-row__price">$2.99</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>1,000 seguidores <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$4.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 seguidores</span>
+                <span class="pricing-row__price">$19.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>10,000 seguidores</span>
+                <span class="pricing-row__price">$36.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="tt-followers-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-tiktok"></i>
+                <span>TikTok</span>
+              </div>
+              <h3>Likes</h3>
+              <p>Likes para tus videos y aumentá el alcance</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>100 likes</span>
+                <span class="pricing-row__price">$0.39</span>
+              </div>
+              <div class="pricing-row">
+                <span>500 likes</span>
+                <span class="pricing-row__price">$1.49</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>1,000 likes <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$2.49</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 likes</span>
+                <span class="pricing-row__price">$9.99</span>
+              </div>
+              <div class="pricing-row">
+                <span>10,000 likes</span>
+                <span class="pricing-row__price">$18.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="tt-likes-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-tiktok"></i>
+                <span>TikTok</span>
+              </div>
+              <h3>Views</h3>
+              <p>Vistas reales para tus videos de TikTok</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row">
+                <span>1,000 views</span>
+                <span class="pricing-row__price">$0.19</span>
+              </div>
+              <div class="pricing-row">
+                <span>5,000 views</span>
+                <span class="pricing-row__price">$0.79</span>
+              </div>
+              <div class="pricing-row pricing-row--popular">
+                <span>10,000 views <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span>
+                <span class="pricing-row__price">$1.29</span>
+              </div>
+              <div class="pricing-row">
+                <span>50,000 views</span>
+                <span class="pricing-row__price">$5.49</span>
+              </div>
+              <div class="pricing-row">
+                <span>100,000 views</span>
+                <span class="pricing-row__price">$9.99</span>
+              </div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="tt-views-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i>
+              Comprar Ahora
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- YouTube -->
+      <div class="pricing-panel" id="panel-youtube" role="tabpanel" aria-labelledby="tab-youtube">
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-youtube" style="color:#FF0000;"></i>
+                <span>YouTube</span>
+              </div>
+              <h3>Suscriptores</h3>
+              <p>Suscriptores reales para tu canal</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>100 suscriptores</span><span class="pricing-row__price">$2.99</span></div>
+              <div class="pricing-row"><span>500 suscriptores</span><span class="pricing-row__price">$12.99</span></div>
+              <div class="pricing-row pricing-row--popular"><span>1,000 suscriptores <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$22.99</span></div>
+              <div class="pricing-row"><span>5,000 suscriptores</span><span class="pricing-row__price">$99.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="yt-subs-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-youtube" style="color:#FF0000;"></i>
+                <span>YouTube</span>
+              </div>
+              <h3>Views</h3>
+              <p>Visualizaciones de calidad para tus videos</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>1,000 views</span><span class="pricing-row__price">$0.99</span></div>
+              <div class="pricing-row"><span>5,000 views</span><span class="pricing-row__price">$3.99</span></div>
+              <div class="pricing-row pricing-row--popular"><span>10,000 views <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$6.99</span></div>
+              <div class="pricing-row"><span>50,000 views</span><span class="pricing-row__price">$29.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="yt-views-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-youtube" style="color:#FF0000;"></i>
+                <span>YouTube</span>
+              </div>
+              <h3>Likes</h3>
+              <p>Likes para mejorar el posicionamiento</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>100 likes</span><span class="pricing-row__price">$0.99</span></div>
+              <div class="pricing-row"><span>500 likes</span><span class="pricing-row__price">$3.99</span></div>
+              <div class="pricing-row pricing-row--popular"><span>1,000 likes <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$6.49</span></div>
+              <div class="pricing-row"><span>5,000 likes</span><span class="pricing-row__price">$27.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="yt-likes-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Facebook -->
+      <div class="pricing-panel" id="panel-facebook" role="tabpanel" aria-labelledby="tab-facebook">
+        <div class="pricing-grid">
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-facebook-f" style="color:#1877F2;"></i>
+                <span>Facebook</span>
+              </div>
+              <h3>Seguidores / Fans</h3>
+              <p>Fans reales para tu página de Facebook</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>100 seguidores</span><span class="pricing-row__price">$0.89</span></div>
+              <div class="pricing-row"><span>500 seguidores</span><span class="pricing-row__price">$3.49</span></div>
+              <div class="pricing-row pricing-row--popular"><span>1,000 seguidores <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$5.99</span></div>
+              <div class="pricing-row"><span>5,000 seguidores</span><span class="pricing-row__price">$22.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="fb-fans-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-facebook-f" style="color:#1877F2;"></i>
+                <span>Facebook</span>
+              </div>
+              <h3>Likes en Publicaciones</h3>
+              <p>Likes para tus fotos, videos y posts</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>100 likes</span><span class="pricing-row__price">$0.49</span></div>
+              <div class="pricing-row"><span>500 likes</span><span class="pricing-row__price">$1.99</span></div>
+              <div class="pricing-row pricing-row--popular"><span>1,000 likes <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$3.29</span></div>
+              <div class="pricing-row"><span>5,000 likes</span><span class="pricing-row__price">$12.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="fb-likes-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+          <div class="pricing-card">
+            <div class="pricing-card__header">
+              <div class="pricing-card__platform">
+                <i class="fa-brands fa-facebook-f" style="color:#1877F2;"></i>
+                <span>Facebook</span>
+              </div>
+              <h3>Views (Videos)</h3>
+              <p>Visualizaciones para tus videos de Facebook</p>
+            </div>
+            <div class="pricing-card__table">
+              <div class="pricing-row"><span>1,000 views</span><span class="pricing-row__price">$0.39</span></div>
+              <div class="pricing-row"><span>5,000 views</span><span class="pricing-row__price">$1.59</span></div>
+              <div class="pricing-row pricing-row--popular"><span>10,000 views <span class="badge badge--accent" style="font-size:0.6rem;padding:0.1rem 0.4rem;">Popular</span></span><span class="pricing-row__price">$2.79</span></div>
+              <div class="pricing-row"><span>50,000 views</span><span class="pricing-row__price">$11.99</span></div>
+            </div>
+            <a href="/register" class="btn btn--primary" id="fb-views-btn" style="width:100%;justify-content:center;margin-top:1.25rem;">
+              <i class="fa-solid fa-shopping-cart"></i> Comprar Ahora
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nota legal -->
+      <p style="text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-muted);">
+        <i class="fa-solid fa-circle-info"></i>
+        Los precios son referenciales. El precio exacto depende del servicio seleccionado en el panel.
+        <a href="/register" style="color:var(--accent-light);">Creá tu cuenta gratis</a> para ver todos los servicios disponibles.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== STATS ===== -->
+  <section id="stats" aria-labelledby="stats-title">
+    <div class="container">
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(6,182,212,0.1));border:1px solid var(--border);border-radius:var(--radius-xl);padding:3rem;text-align:center;">
+        <h2 id="stats-title" style="font-size:clamp(2rem,5vw,3rem);margin-bottom:0.75rem;">
+          Más de <span class="gradient-text" id="counter-orders">50,000+</span>
+        </h2>
+        <p style="color:var(--text-secondary);font-size:1.1rem;margin-bottom:2.5rem;">
+          pedidos completados exitosamente. Únete a nuestra comunidad de creadores que confían en nosotros.
+        </p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2rem;max-width:700px;margin:0 auto;">
+          <div>
+            <div class="stat-number" aria-label="15 mil usuarios activos">15K+</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em;">Usuarios Activos</div>
+          </div>
+          <div>
+            <div class="stat-number" aria-label="500 servicios disponibles">500+</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em;">Servicios</div>
+          </div>
+          <div>
+            <div class="stat-number" aria-label="98 porciento satisfacción">98%</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em;">Satisfacción</div>
+          </div>
+          <div>
+            <div class="stat-number" aria-label="24 horas soporte">24/7</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em;">Soporte</div>
+          </div>
+        </div>
+
+        <div style="margin-top:2rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:var(--text-secondary);">
+            <i class="fa-solid fa-shield-halved" style="color:var(--success);" aria-hidden="true"></i>
+            Panel seguro y confiable
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:var(--text-secondary);">
+            <i class="fa-solid fa-clock" style="color:var(--accent-light);" aria-hidden="true"></i>
+            Entrega en minutos
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;color:var(--text-secondary);">
+            <i class="fa-solid fa-lock" style="color:var(--cyan);" aria-hidden="true"></i>
+            Sin riesgo para tu cuenta
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== LOGIN PANEL INTEGRADO ===== -->
+  <section id="login-section" aria-labelledby="login-panel-title">
+    <div class="container container--narrow">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-user-check"></i>
+          Acceso Rápido
+        </div>
+        <h2 id="login-panel-title">Accedé a tu <span class="gradient-text">cuenta</span></h2>
+        <p>¿Ya sos cliente? Ingresá directamente desde acá.</p>
+      </div>
+
+      <div class="card card--glow" style="max-width:460px;margin:0 auto;">
+        <form id="quick-login-form" action="/api/auth/login" method="POST" novalidate>
+          <div style="display:flex;flex-direction:column;gap:1.25rem;">
+            <div class="form-group">
+              <label class="form-label" for="quick-email">
+                <i class="fa-solid fa-envelope"></i> Email
+              </label>
+              <div class="form-input-wrapper">
+                <i class="fa-solid fa-envelope form-input-icon" aria-hidden="true"></i>
+                <input
+                  class="form-input"
+                  type="email"
+                  id="quick-email"
+                  name="email"
+                  placeholder="vos@ejemplo.com"
+                  autocomplete="email"
+                  required
+                  aria-required="true"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="quick-password">
+                <i class="fa-solid fa-lock"></i> Contraseña
+              </label>
+              <div class="form-input-wrapper">
+                <i class="fa-solid fa-lock form-input-icon" aria-hidden="true"></i>
+                <input
+                  class="form-input"
+                  type="password"
+                  id="quick-password"
+                  name="password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                  aria-required="true"
+                />
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+              <div class="checkbox-wrapper" onclick="document.getElementById('quick-remember').click()">
+                <input type="checkbox" name="remember" id="quick-remember" value="on" onclick="event.stopPropagation()" />
+                <label for="quick-remember" style="font-size:0.8rem;color:var(--text-secondary);cursor:pointer;">Recordarme</label>
+              </div>
+              <a href="/forgot-password" style="font-size:0.8rem;color:var(--accent-light);text-decoration:none;">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <div id="quick-login-error" class="alert alert--error" style="display:none;" role="alert"></div>
+
+            <button type="submit" class="btn btn--primary" id="quick-login-submit" style="width:100%;justify-content:center;">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i>
+              Ingresar
+            </button>
+
+            <p style="text-align:center;font-size:0.875rem;color:var(--text-secondary);">
+              ¿No tenés cuenta?
+              <a href="/register" style="color:var(--accent-light);font-weight:600;text-decoration:none;">
+                Registrate gratis <i class="fa-solid fa-arrow-right" style="font-size:0.7rem;"></i>
+              </a>
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section id="faq" aria-labelledby="faq-title">
+    <div class="container container--narrow">
+      <div class="section-header">
+        <div class="section-tag">
+          <i class="fa-solid fa-circle-question"></i>
+          Preguntas frecuentes
+        </div>
+        <h2 id="faq-title">¿Tenés <span class="gradient-text">dudas?</span></h2>
+        <p>Respondemos las preguntas más comunes de nuestros usuarios.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:0.75rem;" role="list" aria-label="Preguntas frecuentes">
+        <div class="accordion-item" role="listitem">
+          <button class="accordion-trigger" aria-expanded="false" id="faq-q1">
+            <span>¿Es seguro usar Pulse Panel Boost?</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="accordion-content" role="region" aria-labelledby="faq-q1">
+            <div class="accordion-content-inner">
+              Sí, es completamente seguro. No pedimos tu contraseña de ninguna red social. Solo necesitamos el enlace público a tu perfil o publicación. Todos los servicios cumplen con los términos de uso de las plataformas.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item" role="listitem">
+          <button class="accordion-trigger" aria-expanded="false" id="faq-q2">
+            <span>¿Cuánto tarda en entregarse un pedido?</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="accordion-content" role="region" aria-labelledby="faq-q2">
+            <div class="accordion-content-inner">
+              La mayoría de los pedidos comienzan a procesarse en minutos. El tiempo de entrega varía según el servicio y la cantidad solicitada. En tu dashboard podés ver el progreso en tiempo real.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item" role="listitem">
+          <button class="accordion-trigger" aria-expanded="false" id="faq-q3">
+            <span>¿Qué pasa si mi pedido no se completa?</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="accordion-content" role="region" aria-labelledby="faq-q3">
+            <div class="accordion-content-inner">
+              Si un pedido no se completa por algún motivo técnico, el saldo correspondiente es acreditado automáticamente a tu cuenta. Desde tu dashboard podés solicitar un refill (recarga gratuita). Si el problema persiste, contactá a nuestro soporte.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item" role="listitem">
+          <button class="accordion-trigger" aria-expanded="false" id="faq-q4">
+            <span>¿Necesito una cuenta para hacer pedidos?</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="accordion-content" role="region" aria-labelledby="faq-q4">
+            <div class="accordion-content-inner">
+              Sí, necesitás crear una cuenta gratuita para poder realizar pedidos. El registro es rápido, solo necesitás tu email y una contraseña. Una vez registrado, tenés acceso inmediato a todos los servicios.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item" role="listitem">
+          <button class="accordion-trigger" aria-expanded="false" id="faq-q5">
+            <span>¿Cómo cargo saldo en mi cuenta?</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="accordion-content" role="region" aria-labelledby="faq-q5">
+            <div class="accordion-content-inner">
+              Podés cargar saldo desde tu panel de control usando los métodos de pago disponibles. Una vez acreditado el saldo, podés utilizarlo para comprar cualquier servicio disponible en la plataforma.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA FINAL ===== -->
+  <section aria-labelledby="final-cta-title">
+    <div class="container container--narrow">
+      <div class="card card--glow" style="text-align:center;padding:3rem;">
+        <i class="fa-solid fa-rocket" style="font-size:3rem;color:var(--accent-light);margin-bottom:1rem;display:block;" aria-hidden="true"></i>
+        <h2 id="final-cta-title" style="font-size:clamp(1.5rem,4vw,2.25rem);margin-bottom:0.75rem;">
+          Listo para <span class="gradient-text">despegar</span>?
+        </h2>
+        <p style="color:var(--text-secondary);margin-bottom:2rem;max-width:480px;margin-left:auto;margin-right:auto;">
+          Únete a miles de creadores y marcas que ya confían en Pulse Panel Boost para crecer en redes sociales.
+        </p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+          <a href="/register" class="btn btn--primary btn--lg" id="final-cta-btn">
+            <i class="fa-solid fa-user-plus"></i>
+            Crear mi cuenta gratis
+          </a>
+          <a href="#faq" class="btn btn--ghost btn--lg" id="final-faq-btn">
+            <i class="fa-solid fa-circle-question"></i>
+            Ver FAQ
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__grid">
+        <div class="footer__brand">
+          <a href="/" class="navbar__logo" aria-label="Pulse Panel Boost - Inicio">
+            <div class="navbar__logo-icon">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="navbar__logo-text">Pulse<span>Boost</span></span>
+          </a>
+          <p>
+            El panel SMM más confiable para crecer en redes sociales. Seguidores reales, entrega rápida y soporte 24/7.
+          </p>
+          <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+            <a href="https://instagram.com/pulsepanelboost" target="_blank" rel="noopener noreferrer" class="footer__social-icon" aria-label="Instagram">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+            </a>
+            <a href="https://wa.me/549XXXXXXXXXX" target="_blank" rel="noopener noreferrer" class="footer__social-icon" aria-label="WhatsApp">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+            </a>
+            <a href="https://t.me/pulsepanelboost" target="_blank" rel="noopener noreferrer" class="footer__social-icon" aria-label="Telegram">
+              <i class="fa-brands fa-telegram" aria-hidden="true"></i>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="footer__title">Plataforma</h3>
+          <ul class="footer__links">
+            <li><a href="/register">Crear Cuenta</a></li>
+            <li><a href="/login">Iniciar Sesión</a></li>
+            <li><a href="#pricing">Precios</a></li>
+            <li><a href="#features">Características</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer__title">Servicios</h3>
+          <ul class="footer__links">
+            <li><a href="/register">Instagram</a></li>
+            <li><a href="/register">TikTok</a></li>
+            <li><a href="/register">YouTube</a></li>
+            <li><a href="/register">Twitter/X</a></li>
+            <li><a href="/register">Facebook</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="footer__title">Legal</h3>
+          <ul class="footer__links">
+            <li><a href="/terms">Términos de Uso</a></li>
+            <li><a href="/privacy">Política de Privacidad</a></li>
+            <li><a href="/contact">Contacto</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer__bottom">
+        <p class="footer__copyright">
+          © 2026 Pulse Panel Boost. Todos los derechos reservados.
+        </p>
+        <div style="display:flex;align-items:center;gap:0.5rem;font-size:0.75rem;color:var(--text-muted);">
+          <span class="status-dot status-dot--online" aria-hidden="true"></span>
+          Todos los servicios operativos
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</BaseLayout>
+
+<script>
+  // ===== PARTICLES =====
+  function createParticles() {
+    const container = document.getElementById('particles-container');
+    if (!container) return;
+
+    const colors = ['#7c3aed', '#06b6d4', '#ec4899', '#10b981'];
+    const count = 20;
+
+    for (let i = 0; i < count; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      const size = Math.random() * 4 + 2;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const left = Math.random() * 100;
+      const duration = Math.random() * 15 + 10;
+      const delay = Math.random() * 10;
+
+      particle.style.cssText = `
+        width: ${size}px;
+        height: ${size}px;
+        background: ${color};
+        left: ${left}%;
+        animation-duration: ${duration}s;
+        animation-delay: -${delay}s;
+        box-shadow: 0 0 ${size * 3}px ${color};
+      `;
+      container.appendChild(particle);
+    }
+  }
+
+  // ===== ACCORDION =====
+  function initAccordions() {
+    const items = document.querySelectorAll('.accordion-item');
+    items.forEach((item) => {
+      const trigger = item.querySelector('.accordion-trigger') as HTMLButtonElement;
+      const content = item.querySelector('.accordion-content') as HTMLElement;
+      if (!trigger || !content) return;
+
+      trigger.addEventListener('click', () => {
+        const isOpen = item.classList.contains('open');
+
+        // Close all
+        items.forEach((i) => {
+          i.classList.remove('open');
+          const c = i.querySelector('.accordion-content') as HTMLElement;
+          const t = i.querySelector('.accordion-trigger') as HTMLButtonElement;
+          if (c) c.classList.remove('open');
+          if (t) t.setAttribute('aria-expanded', 'false');
+        });
+
+        // Open clicked if it was closed
+        if (!isOpen) {
+          item.classList.add('open');
+          content.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  }
+
+  // ===== PRICING TABS =====
+  function initPricingTabs() {
+    const tabs = document.querySelectorAll('.pricing-tab');
+    const panels = document.querySelectorAll('.pricing-panel');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const targetId = (tab as HTMLElement).dataset.tab;
+
+        tabs.forEach((t) => {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        panels.forEach((p) => p.classList.remove('active'));
+
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        const panel = document.getElementById(`panel-${targetId}`);
+        if (panel) panel.classList.add('active');
+      });
+    });
+  }
+
+  // ===== QUICK LOGIN FORM =====
+  function initQuickLogin() {
+    const form = document.getElementById('quick-login-form') as HTMLFormElement;
+    const errorEl = document.getElementById('quick-login-error') as HTMLElement;
+    const submitBtn = document.getElementById('quick-login-submit') as HTMLButtonElement;
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Ingresando...';
+
+      const formData = new FormData(form);
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.redirected) {
+          window.location.href = res.url;
+          return;
+        }
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          window.location.href = '/dashboard';
+        } else {
+          errorEl.style.display = 'flex';
+          errorEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.error || 'Credenciales incorrectas'}`;
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ingresar';
+        }
+      } catch {
+        errorEl.style.display = 'flex';
+        errorEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Intentá de nuevo.';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Ingresar';
+      }
+    });
+  }
+
+  // ===== INTERSECTION OBSERVER =====
+  function initAnimations() {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            (entry.target as HTMLElement).style.opacity = '1';
+            (entry.target as HTMLElement).style.transform = 'translateY(0)';
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    document.querySelectorAll('.card, .step-card, .network-icon, .feature-card, .pricing-card').forEach((el) => {
+      const htmlEl = el as HTMLElement;
+      htmlEl.style.opacity = '0';
+      htmlEl.style.transform = 'translateY(20px)';
+      htmlEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      observer.observe(el);
+    });
+  }
+
+  // ===== THEME ICON SYNC =====
+  function syncThemeIcon() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const icon = document.getElementById('theme-icon');
+    if (icon) {
+      icon.className = current === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
+  }
+
+  // Init
+  document.addEventListener('DOMContentLoaded', () => {
+    createParticles();
+    initAccordions();
+    initPricingTabs();
+    initQuickLogin();
+    initAnimations();
+    syncThemeIcon();
+  });
+</script>

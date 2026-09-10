@@ -1,0 +1,261 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import { getServices } from '../../lib/smm';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+
+let services = [];
+let error = null;
+
+try {
+  services = await getServices();
+} catch (e) {
+  console.error('Error al cargar servicios:', e);
+  error = 'No se pudieron cargar los servicios. Por favor, intentá nuevamente más tarde.';
+}
+
+function getCategoryIcon(name: string, category: string) {
+  const str = (name + ' ' + category).toLowerCase();
+  if (str.includes('instagram') || str.includes('ig ')) return { class: 'fa-brands fa-instagram', color: '#E1306C' };
+  if (str.includes('tiktok') || str.includes('tik tok')) return { class: 'fa-brands fa-tiktok', color: '#00f2fe' };
+  if (str.includes('youtube') || str.includes('yt ')) return { class: 'fa-brands fa-youtube', color: '#FF0000' };
+  if (str.includes('facebook') || str.includes('fb ')) return { class: 'fa-brands fa-facebook-f', color: '#1877F2' };
+  if (str.includes('twitter') || str.includes('x ')) return { class: 'fa-brands fa-x-twitter', color: '#fff' };
+  if (str.includes('telegram')) return { class: 'fa-brands fa-telegram', color: '#24A1DE' };
+  if (str.includes('spotify')) return { class: 'fa-brands fa-spotify', color: '#1DB954' };
+  if (str.includes('twitch')) return { class: 'fa-brands fa-twitch', color: '#9146FF' };
+  if (str.includes('linkedin')) return { class: 'fa-brands fa-linkedin-in', color: '#0A66C2' };
+  if (str.includes('kick')) return { class: 'fa-solid fa-k', color: '#53fc18' };
+  if (str.includes('vimeo')) return { class: 'fa-brands fa-vimeo-v', color: '#1ab7ea' };
+  if (str.includes('pinterest')) return { class: 'fa-brands fa-pinterest', color: '#BD081C' };
+  if (str.includes('snapchat') || str.includes('snap')) return { class: 'fa-brands fa-snapchat', color: '#FFFC00' };
+  if (str.includes('discord')) return { class: 'fa-brands fa-discord', color: '#5865F2' };
+  if (str.includes('threads')) return { class: 'fa-brands fa-threads', color: '#fff' };
+  if (str.includes('reddit')) return { class: 'fa-brands fa-reddit', color: '#FF4500' };
+  if (str.includes('soundcloud')) return { class: 'fa-brands fa-soundcloud', color: '#ff5500' };
+  if (str.includes('website') || str.includes('traffic')) return { class: 'fa-solid fa-globe', color: '#a8b2d1' };
+  return { class: 'fa-solid fa-link', color: 'var(--text-muted)' };
+}
+---
+
+<DashboardLayout title="Servicios" activeNav="services">
+  <div class="dashboard-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
+          <span class="gradient-text">Servicios</span> Disponibles
+        </h1>
+        <p style="color:var(--text-secondary);font-size:0.875rem;">
+          Explorá nuestro catálogo completo de servicios SMM.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {error ? (
+    <div class="card" style="text-align:center;padding:3rem;">
+      <i class="fa-solid fa-triangle-exclamation" style="font-size:3rem;color:var(--danger);margin-bottom:1rem;display:block;" aria-hidden="true"></i>
+      <h3 style="color:var(--text-primary);margin-bottom:0.5rem;">Ups, algo salió mal</h3>
+      <p style="color:var(--text-secondary);">{error}</p>
+    </div>
+  ) : (
+    <div class="card" style="padding:0;">
+      <!-- Buscador + Filtro -->
+      <div style="padding:1.5rem;border-bottom:1px solid var(--border);display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <div class="form-group" style="margin:0;flex:1;min-width:200px;">
+          <div class="input-with-icon">
+            <i class="fa-solid fa-search" aria-hidden="true"></i>
+            <input type="text" id="search-services" class="form-input" placeholder="Buscar por nombre, ID o categoría..." />
+          </div>
+        </div>
+        <select id="price-sort-services" style="padding:0.65rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:0.85rem;cursor:pointer;">
+          <option value="">Ordenar por precio</option>
+          <option value="asc">Precio: Menor a Mayor</option>
+          <option value="desc">Precio: Mayor a Menor</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:0.5rem;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.5rem 1rem;font-size:0.85rem;">
+          <span style="color:var(--text-muted);">Moneda:</span>
+          <button id="currency-usd" style="background:var(--accent);color:white;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:600;">USD</button>
+          <button id="currency-ars" style="background:transparent;color:var(--text-secondary);border:1px solid var(--border);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:600;">ARS</button>
+        </div>
+      </div>
+
+      <!-- Tabla de Servicios -->
+      <div class="table-wrapper" role="region" aria-label="Lista de servicios" style="overflow-x:auto;">
+        <table class="data-table" id="services-table" style="width:100%;min-width:750px;table-layout:fixed;">
+          <thead>
+            <tr>
+              <th scope="col" style="width:90px;">ID</th>
+              <th scope="col">Servicio</th>
+              <th scope="col" style="width:140px;">Precio / 1K</th>
+              <th scope="col" style="width:90px;">Min</th>
+              <th scope="col" style="width:90px;">Max</th>
+              <th scope="col" style="width:90px;text-align:center;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {services.map((s: any) => (
+              <tr class="service-row">
+                <td>
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <div style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;">
+                      <i class={getCategoryIcon(s.name, s.category).class} style={`color: ${getCategoryIcon(s.name, s.category).color};font-size:0.9rem;`}></i>
+                    </div>
+                    <span class="font-mono" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">
+                      {s.service}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;flex-direction:column;gap:0.25rem;">
+                    <div class="service-name" style="font-size:0.9rem;font-weight:600;color:var(--text-primary);">
+                      {s.name}
+                    </div>
+                    <div class="service-category" style="font-size:0.75rem;color:var(--text-muted);">
+                      <span class="badge badge--cyan" style="font-size:0.65rem;padding:2px 6px;">
+                        {s.category}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td class="price-cell" data-rate={parseFloat(s.rate).toFixed(4)} style="font-size:0.9rem;font-weight:700;color:var(--success);white-space:nowrap;font-variant-numeric:tabular-nums;">
+                  ${parseFloat(s.rate).toFixed(4)}
+                </td>
+                <td style="font-size:0.85rem;color:var(--text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums;">
+                  {parseInt(s.min).toLocaleString('es-AR')}
+                </td>
+                <td style="font-size:0.85rem;color:var(--text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums;">
+                  {parseInt(s.max).toLocaleString('es-AR')}
+                </td>
+                <td style="text-align:center;">
+                  <a href={`/dashboard/new-order?service=${s.service}&category=${encodeURIComponent(s.category)}`} class="btn btn--primary btn--sm" style="padding:0.4rem 0.75rem;font-size:0.8rem;">
+                    Pedir
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {services.length === 0 && (
+          <div style="text-align:center;padding:3rem;color:var(--text-muted);">
+            No hay servicios disponibles en este momento.
+          </div>
+        )}
+      </div>
+      
+      <div id="no-results" style="display:none;text-align:center;padding:3rem;color:var(--text-muted);">
+        <i class="fa-solid fa-search" style="font-size:2rem;margin-bottom:1rem;opacity:0.5;"></i>
+        <p>No se encontraron servicios que coincidan con tu búsqueda.</p>
+      </div>
+    </div>
+  )}
+</DashboardLayout>
+
+<script>
+  // State
+  let currentCurrency = 'USD';
+  let dolarRate = 0;
+  const rows = document.querySelectorAll('.service-row');
+  const allRates: number[] = [];
+
+  // Extract original rates from each row
+  rows.forEach(row => {
+    const priceCell = row.querySelector('.price-cell') as HTMLElement;
+    if (priceCell) {
+      allRates.push(parseFloat(priceCell.dataset.rate || '0'));
+    }
+  });
+
+  // Fetch ARS dollar rate
+  async function fetchDolarRate() {
+    try {
+      const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+      const data = await res.json();
+      dolarRate = data.venta || 0;
+    } catch {
+      try {
+        const res2 = await fetch('https://api.bluelytics.com.ar/v2/latest');
+        const data2 = await res2.json();
+        dolarRate = data2.blue?.value_sell || 0;
+      } catch {
+        dolarRate = 1200; // fallback
+      }
+    }
+  }
+  fetchDolarRate();
+
+  function updatePrices() {
+    rows.forEach((row, i) => {
+      const priceCell = row.querySelector('.price-cell') as HTMLElement;
+      if (!priceCell) return;
+      const usdRate = parseFloat(priceCell.dataset.rate || '0');
+      if (currentCurrency === 'ARS' && dolarRate > 0) {
+        const arsRate = usdRate * dolarRate;
+        priceCell.textContent = `$${arsRate.toFixed(2)} ARS`;
+      } else {
+        priceCell.textContent = `$${usdRate.toFixed(4)}`;
+      }
+    });
+  }
+
+  // Currency toggle
+  document.getElementById('currency-usd')?.addEventListener('click', () => {
+    currentCurrency = 'USD';
+    (document.getElementById('currency-usd') as HTMLElement).style.background = 'var(--accent)';
+    (document.getElementById('currency-usd') as HTMLElement).style.color = 'white';
+    (document.getElementById('currency-ars') as HTMLElement).style.background = 'transparent';
+    (document.getElementById('currency-ars') as HTMLElement).style.color = 'var(--text-secondary)';
+    updatePrices();
+  });
+
+  document.getElementById('currency-ars')?.addEventListener('click', () => {
+    currentCurrency = 'ARS';
+    (document.getElementById('currency-ars') as HTMLElement).style.background = 'var(--accent)';
+    (document.getElementById('currency-ars') as HTMLElement).style.color = 'white';
+    (document.getElementById('currency-usd') as HTMLElement).style.background = 'transparent';
+    (document.getElementById('currency-usd') as HTMLElement).style.color = 'var(--text-secondary)';
+    updatePrices();
+  });
+
+  // Search filter
+  const searchInput = document.getElementById('search-services') as HTMLInputElement;
+  const noResults = document.getElementById('no-results');
+  const table = document.getElementById('services-table');
+
+  if (searchInput && rows.length > 0) {
+    searchInput.addEventListener('input', (e) => {
+      const term = (e.target as HTMLInputElement).value.toLowerCase();
+      let visibleCount = 0;
+      rows.forEach((row) => {
+        const text = row.textContent?.toLowerCase() || '';
+        if (text.includes(term)) {
+          (row as HTMLElement).style.display = '';
+          visibleCount++;
+        } else {
+          (row as HTMLElement).style.display = 'none';
+        }
+      });
+      if (noResults && table) {
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        table.style.display = visibleCount === 0 ? 'none' : 'table';
+      }
+    });
+  }
+
+  // Price sort
+  document.getElementById('price-sort-services')?.addEventListener('change', (e) => {
+    const sort = (e.target as HTMLSelectElement).value;
+    if (!sort) return;
+    const tbody = document.querySelector('#services-table tbody');
+    if (!tbody) return;
+    const rowsArr = Array.from(tbody.querySelectorAll('.service-row'));
+    rowsArr.sort((a, b) => {
+      const rateA = parseFloat((a.querySelector('.price-cell') as HTMLElement)?.dataset.rate || '0');
+      const rateB = parseFloat((b.querySelector('.price-cell') as HTMLElement)?.dataset.rate || '0');
+      return sort === 'asc' ? rateA - rateB : rateB - rateA;
+    });
+    rowsArr.forEach(r => tbody.appendChild(r));
+  });
+</script>

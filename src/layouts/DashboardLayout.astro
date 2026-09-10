@@ -1,0 +1,241 @@
+---
+import '../styles/global.css';
+import '@fortawesome/fontawesome-free/css/all.min.css';
+import { getSessionFromCookies } from '../lib/auth';
+import sql from '../lib/db';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) {
+  return Astro.redirect('/login');
+}
+
+let userStats = { balance: 0, spent: 0 };
+try {
+  const [userData] = await sql`SELECT balance, spent FROM users WHERE id = ${session.userId}`;
+  if (userData) userStats = userData;
+} catch (e) { console.error('Error fetching user stats:', e); }
+
+export interface Props {
+  title?: string;
+  activeNav?: string;
+}
+
+const { title = 'Dashboard', activeNav = 'dashboard' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} — Pulse Panel Boost</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="dashboard-layout">
+      <!-- Mobile Header (Hidden on Desktop) -->
+      <div class="dashboard-mobile-header">
+        <a href="/" class="navbar__logo">
+          <img src="/img/logo1.png" alt="SMM Panel Logo" class="logo-dark" style="height: 40px; width: auto;" />
+          <img src="/img/logo2light.png" alt="SMM Panel Logo" class="logo-light" style="height: 40px; width: auto; display:none;" />
+        </a>
+        <button class="mobile-menu-btn" onclick="toggleDashboardSidebar()" aria-label="Menú">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar" style="background: var(--bg-secondary); border-right: 1px solid var(--border);">
+        <div class="sidebar__logo">
+          <a href="/" class="navbar__logo" style="display:flex; justify-content:center; width:100%;">
+            <img src="/img/logo1.png" alt="SMM Panel Logo" class="logo-dark" style="height: 56px; width: auto;" />
+            <img src="/img/logo2light.png" alt="SMM Panel Logo" class="logo-light" style="height: 56px; width: auto; display:none;" />
+          </a>
+        </div>
+
+        <nav class="sidebar__nav">
+          <a href="/dashboard/new-order" class={`sidebar__nav-link ${activeNav === 'new-order' ? 'active' : ''}`}>
+            <i class="fa-solid fa-cart-shopping"></i>
+            New Order
+          </a>
+          <a href="/dashboard/orders" class={`sidebar__nav-link ${activeNav === 'orders' ? 'active' : ''}`}>
+            <i class="fa-solid fa-box"></i>
+            Orders
+          </a>
+          <a href="/dashboard/add-funds" class={`sidebar__nav-link ${activeNav === 'add-funds' ? 'active' : ''}`}>
+            <i class="fa-solid fa-wallet"></i>
+            Add Funds
+          </a>
+          <a href="/dashboard/services" class={`sidebar__nav-link ${activeNav === 'services' ? 'active' : ''}`}>
+            <i class="fa-solid fa-list-ul"></i>
+            Services
+          </a>
+          <a href="/dashboard/api" class={`sidebar__nav-link ${activeNav === 'api' ? 'active' : ''}`}>
+            <i class="fa-solid fa-code"></i>
+            API
+          </a>
+          <a href="/dashboard/tickets" class={`sidebar__nav-link ${activeNav === 'tickets' ? 'active' : ''}`}>
+            <i class="fa-solid fa-ticket"></i>
+            Tickets <span class="badge badge--warning" style="margin-left:auto;font-size:0.6rem;padding:2px 5px;">1</span>
+          </a>
+        </nav>
+
+        <div class="sidebar__footer">
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:var(--bg-card);border-radius:var(--radius-md);border:1px solid var(--border);">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--gradient-accent);display:flex;align-items:center;justify-content:center;color:white;font-size:0.9rem;flex-shrink:0;">
+              {session.name.charAt(0).toUpperCase()}
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);truncate">{session.name}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{session.email}</div>
+            </div>
+            <form action="/api/auth/logout" method="POST" style="margin-left:auto;flex-shrink:0">
+              <button type="submit" title="Cerrar sesión" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;padding:4px;transition:color 0.15s">
+                <i class="fa-solid fa-right-from-bracket"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="dashboard-main" style="background: var(--bg-primary); padding: 0;">
+        <!-- Topbar Desktop -->
+        <header style="height: 70px; display: flex !important; align-items: center; justify-content: space-between; padding: 0 2rem; border-bottom: 1px solid var(--border); background: var(--bg-secondary); width: 100%; box-sizing: border-box;" class="desktop-only">
+          <div style="display:flex; align-items:center; gap: 0.75rem;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent);"></div>
+            <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); text-transform: capitalize;">{title}</span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap: 1rem;">
+            <div id="topbar-dolar-rate" style="background: var(--bg-input); padding: 0.4rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); border: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem;">
+              <i class="fa-solid fa-arrow-trend-up" style="color:var(--success);"></i>
+              <span id="dolar-label">USD/ARS: Cargando...</span>
+            </div>
+
+            <a href="/dashboard/add-funds" style="text-decoration:none; background: var(--bg-tertiary); padding: 0.45rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 700; color: var(--text-primary); border: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; transition: transform 0.15s;">
+              <i class="fa-solid fa-wallet" style="color:var(--accent);"></i>
+              ${parseFloat(userStats.balance).toFixed(2)} USD
+            </a>
+
+            <button onclick="toggleTheme()" class="theme-toggle" aria-label="Cambiar tema" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:var(--bg-input);cursor:pointer;">
+              <i id="dashboard-theme-icon" class="fa-solid fa-sun"></i>
+            </button>
+
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--gradient-accent);display:flex;align-items:center;justify-content:center;color:white;font-size:0.9rem;font-weight:700;border:1px solid rgba(255,255,255,0.2);">
+              {session.name.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        <div style="padding: 2rem; max-width: 1400px; margin: 0 auto;">
+          <!-- Stats Row -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1.5rem;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(44, 177, 154, 0.15);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                <i class="fa-solid fa-wallet"></i>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Balance</div>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--text-primary);">$ {parseFloat(userStats.balance).toFixed(2)}</div>
+              </div>
+            </div>
+            <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1.5rem;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(239, 68, 68, 0.15);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                <i class="fa-solid fa-money-bill-wave"></i>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Spent</div>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--text-primary);">$ {parseFloat(userStats.spent).toFixed(2)}</div>
+              </div>
+            </div>
+            <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1.5rem;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(59, 130, 246, 0.15);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                <i class="fa-solid fa-car-side"></i>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Cashback Pts</div>
+                <div style="font-size:1.5rem;font-weight:800;color:var(--text-primary);">0</div>
+              </div>
+            </div>
+            <div class="card" style="display:flex;align-items:center;gap:1rem;padding:1.5rem;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(245, 158, 11, 0.15);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                <i class="fa-solid fa-star"></i>
+              </div>
+              <div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Level</div>
+                <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary);">STARTER</div>
+              </div>
+            </div>
+          </div>
+
+          <slot />
+        </div>
+      </main>
+    </div>
+
+    <script is:inline>
+      (function () {
+        const stored = localStorage.getItem('ppb-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+
+      function toggleDashboardSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+          sidebar.classList.toggle('open');
+        }
+      }
+      window.toggleDashboardSidebar = toggleDashboardSidebar;
+
+      // Theme toggle for dashboard
+      function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('ppb-theme', next);
+        updateThemeVisuals(next);
+      }
+      window.toggleTheme = toggleTheme;
+
+      function updateThemeVisuals(theme) {
+        // Update theme icons
+        document.querySelectorAll('#dashboard-theme-icon').forEach(el => {
+          el.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        });
+        // Toggle logos
+        document.querySelectorAll('.logo-dark').forEach(el => {
+          el.style.display = theme === 'dark' ? 'block' : 'none';
+        });
+        document.querySelectorAll('.logo-light').forEach(el => {
+          el.style.display = theme === 'light' ? 'block' : 'none';
+        });
+      }
+      // Initialize theme visuals
+      updateThemeVisuals(document.documentElement.getAttribute('data-theme') || 'dark');
+
+      // Live Dólar update
+      async function updateDolarBadge() {
+        try {
+          const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+          const data = await res.json();
+          if (data && data.venta) {
+            const label = document.getElementById('dolar-label');
+            if (label) label.textContent = `1 USD = $${data.venta.toLocaleString('es-AR')} ARS`;
+          }
+        } catch {
+          const label = document.getElementById('dolar-label');
+          if (label) label.textContent = '1 USD ≈ $1.350 ARS';
+        }
+      }
+      updateDolarBadge();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,158 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import sql from '../../lib/db';
+import crypto from 'crypto';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+
+let apiKey = '';
+let successMsg = '';
+
+// Check if user has an api_key column or key in users table
+try {
+  // Ensure api_key column exists
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key TEXT`;
+  
+  if (Astro.request.method === 'POST') {
+    const newKey = crypto.randomBytes(24).toString('hex');
+    await sql`UPDATE users SET api_key = ${newKey} WHERE id = ${session.userId}`;
+    apiKey = newKey;
+    successMsg = '¡Nueva API Key generada exitosamente!';
+  } else {
+    const [user] = await sql`SELECT api_key FROM users WHERE id = ${session.userId}`;
+    if (user && user.api_key) {
+      apiKey = user.api_key;
+    }
+  }
+} catch (e) {
+  console.error('API key management error:', e);
+}
+---
+
+<DashboardLayout title="API para Desarrolladores" activeNav="api">
+  <div class="dashboard-header">
+    <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
+      <span class="gradient-text">API</span> de Integración
+    </h1>
+    <p style="color:var(--text-secondary);font-size:0.875rem;">
+      Conectá tu propio panel o sistema mediante nuestra API REST compatible con estándar SMM.
+    </p>
+  </div>
+
+  {successMsg && (
+    <div style="background:rgba(16,185,129,0.15);border:1px solid var(--success);color:var(--success);padding:1rem;border-radius:var(--radius-md);margin-bottom:1.5rem;font-size:0.9rem;font-weight:500;">
+      <i class="fa-solid fa-circle-check" style="margin-right:0.5rem;"></i> {successMsg}
+    </div>
+  )}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;" id="api-grid">
+    <!-- Key Management -->
+    <div class="card" style="padding:1.5rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+        <i class="fa-solid fa-key" style="color:var(--accent);"></i>
+        Tu API Key
+      </h3>
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.25rem;">
+        Utilizá esta clave en el parámetro <code>key</code> para autenticar todas tus peticiones HTTP POST.
+      </p>
+
+      {apiKey ? (
+        <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <code style="font-family:var(--font-mono);font-size:0.9rem;color:var(--accent-light);word-break:break-all;">{apiKey}</code>
+          <button onclick={`navigator.clipboard.writeText('${apiKey}'); alert('API Key copiada al portapapeles');`} style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0.25rem 0.5rem;font-size:1rem;" title="Copiar">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+        </div>
+      ) : (
+        <div style="background:rgba(245,158,11,0.1);border:1px solid var(--warning);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;color:var(--warning);font-size:0.85rem;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-right:0.5rem;"></i> Aún no has generado una API Key.
+        </div>
+      )}
+
+      <form method="POST">
+        <button type="submit" class="btn btn--primary btn--sm" style="width:100%;justify-content:center;">
+          <i class="fa-solid fa-rotate" style="margin-right:0.5rem;"></i>
+          {apiKey ? 'Regenerar API Key' : 'Generar API Key'}
+        </button>
+      </form>
+    </div>
+
+    <!-- Overview Details -->
+    <div class="card" style="padding:1.5rem;">
+      <h3 style="font-size:1.1rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+        <i class="fa-solid fa-server" style="color:var(--cyan);"></i>
+        Especificaciones Técnicas
+      </h3>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.85rem;">
+        <div style="display:flex;justify-content:space-between;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+          <span style="color:var(--text-secondary);">HTTP Method:</span>
+          <strong style="color:var(--text-primary);">POST</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+          <span style="color:var(--text-secondary);">API URL:</span>
+          <strong style="color:var(--accent-light);">https://seguidores.com.ar/api/v2</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+          <span style="color:var(--text-secondary);">Response Format:</span>
+          <strong style="color:var(--text-primary);">JSON</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Endpoints Docs -->
+  <div class="card" style="padding:1.5rem;">
+    <h3 style="font-size:1.1rem;margin-bottom:1.25rem;">
+      <i class="fa-solid fa-book" style="color:var(--accent);margin-right:0.5rem;"></i>
+      Endpoints Disponibles
+    </h3>
+
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+      <!-- Services -->
+      <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;font-size:0.95rem;">1. Lista de Servicios (action: services)</div>
+        <pre style="background:var(--bg-primary);padding:1rem;border-radius:var(--radius-sm);overflow-x:auto;font-size:0.8rem;color:var(--text-secondary);"><code>{`POST /api/v2
+key=TU_API_KEY
+action=services`}</code></pre>
+      </div>
+
+      <!-- Add Order -->
+      <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;font-size:0.95rem;">2. Crear Pedido (action: add)</div>
+        <pre style="background:var(--bg-primary);padding:1rem;border-radius:var(--radius-sm);overflow-x:auto;font-size:0.8rem;color:var(--text-secondary);"><code>{`POST /api/v2
+key=TU_API_KEY
+action=add
+service=123
+link=https://instagram.com/perfil
+quantity=1000`}</code></pre>
+      </div>
+
+      <!-- Order Status -->
+      <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;font-size:0.95rem;">3. Estado del Pedido (action: status)</div>
+        <pre style="background:var(--bg-primary);padding:1rem;border-radius:var(--radius-sm);overflow-x:auto;font-size:0.8rem;color:var(--text-secondary);"><code>{`POST /api/v2
+key=TU_API_KEY
+action=status
+order=98765`}</code></pre>
+      </div>
+
+      <!-- Balance -->
+      <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1.25rem;">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;font-size:0.95rem;">4. Consultar Saldo (action: balance)</div>
+        <pre style="background:var(--bg-primary);padding:1rem;border-radius:var(--radius-sm);overflow-x:auto;font-size:0.8rem;color:var(--text-secondary);"><code>{`POST /api/v2
+key=TU_API_KEY
+action=balance`}</code></pre>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<style>
+  @media (max-width: 768px) {
+    #api-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>

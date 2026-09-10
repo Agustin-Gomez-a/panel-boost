@@ -1,0 +1,613 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+---
+
+<DashboardLayout title="Nuevo Pedido" activeNav="new-order">
+  <div class="dashboard-header">
+    <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
+      <span class="gradient-text">Nuevo</span> Pedido
+    </h1>
+    <p style="color:var(--text-secondary);font-size:0.875rem;">
+      Seleccioná un servicio y completá los datos
+    </p>
+  </div>
+
+  <div id="quick-categories" style="display:flex;gap:0.75rem;overflow-x:auto;padding-bottom:1rem;margin-bottom:0.5rem;scrollbar-width:none;flex-wrap:wrap;">
+    <!-- Filled via JS -->
+  </div>
+
+  <!-- Search + Price Sort -->
+  <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <div style="flex:1;min-width:200px;position:relative;">
+      <i class="fa-solid fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.85rem;"></i>
+      <input type="text" id="service-search" placeholder="Buscar servicio..." style="width:100%;padding:0.65rem 0.65rem 0.65rem 36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:0.85rem;outline:none;transition:border 0.2s;" />
+    </div>
+    <select id="price-sort" style="padding:0.65rem 1rem;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:0.85rem;cursor:pointer;">
+      <option value="">Ordenar por precio</option>
+      <option value="asc">Precio: Menor a Mayor</option>
+      <option value="desc">Precio: Mayor a Menor</option>
+    </select>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start;" id="order-layout">
+    <!-- Form -->
+    <div class="card">
+      <form id="new-order-form" novalidate>
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+          <!-- Category filter -->
+          <div class="form-group">
+            <label class="form-label" for="category-filter">
+              <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              Categoría
+            </label>
+            <div class="form-input-wrapper">
+              <i class="fa-solid fa-layer-group form-input-icon" aria-hidden="true"></i>
+              <select class="form-select" id="category-filter">
+                <option value="">Cargando categorías...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Service -->
+          <div class="form-group">
+            <label class="form-label" for="service-select">
+              <i class="fa-solid fa-cube" aria-hidden="true"></i>
+              Servicio
+            </label>
+            <div class="form-input-wrapper">
+              <i class="fa-solid fa-cube form-input-icon" aria-hidden="true"></i>
+              <select class="form-select" id="service-select" required aria-required="true">
+                <option value="">Seleccioná una categoría primero</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Service info -->
+          <div id="service-info" style="display:none;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;" role="region" aria-label="Información del servicio">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;font-size:0.8rem;">
+              <div>
+                <div style="color:var(--text-muted);margin-bottom:0.25rem;">Precio por 1000</div>
+                <div style="font-weight:700;color:var(--success);" id="info-rate">—</div>
+              </div>
+              <div>
+                <div style="color:var(--text-muted);margin-bottom:0.25rem;">Mínimo</div>
+                <div style="font-weight:700;" id="info-min">—</div>
+              </div>
+              <div>
+                <div style="color:var(--text-muted);margin-bottom:0.25rem;">Máximo</div>
+                <div style="font-weight:700;" id="info-max">—</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;margin-top:0.75rem;" id="info-badges"></div>
+          </div>
+
+          <!-- Link -->
+          <div class="form-group">
+            <label class="form-label" for="order-link">
+              <i class="fa-solid fa-link" aria-hidden="true"></i>
+              Enlace
+            </label>
+            <div class="form-input-wrapper">
+              <i class="fa-solid fa-link form-input-icon" aria-hidden="true"></i>
+              <input
+                class="form-input"
+                type="url"
+                id="order-link"
+                name="link"
+                placeholder="https://www.instagram.com/tu_perfil"
+                required
+                aria-required="true"
+              />
+            </div>
+            <span class="form-hint">Ingresá el enlace completo a tu perfil o publicación</span>
+            <span class="form-error" id="link-error" style="display:none;" role="alert">
+              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              Ingresá un enlace válido
+            </span>
+          </div>
+
+          <!-- Quantity -->
+          <div class="form-group">
+            <label class="form-label" for="order-quantity">
+              <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
+              Cantidad
+            </label>
+            <div class="form-input-wrapper">
+              <i class="fa-solid fa-hashtag form-input-icon" aria-hidden="true"></i>
+              <input
+                class="form-input"
+                type="number"
+                id="order-quantity"
+                name="quantity"
+                placeholder="100"
+                min="1"
+                required
+                aria-required="true"
+              />
+            </div>
+            <span class="form-error" id="quantity-error" style="display:none;" role="alert">
+              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              <span id="quantity-error-msg">Ingresá una cantidad válida</span>
+            </span>
+          </div>
+
+          <!-- Error / Success -->
+          <div id="order-error" class="alert alert--error" style="display:none;" role="alert"></div>
+          <div id="order-success" class="alert alert--success" style="display:none;" role="status"></div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn btn--primary" id="submit-order-btn" style="justify-content:center;padding:0.875rem;" disabled>
+            <i class="fa-solid fa-rocket" aria-hidden="true"></i>
+            Hacer Pedido
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Order Summary -->
+    <div>
+      <div class="card card--glow" style="position:sticky;top:80px;">
+        <h3 style="font-size:1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem;">
+          <i class="fa-solid fa-receipt" style="color:var(--accent-light);" aria-hidden="true"></i>
+          Resumen del Pedido
+        </h3>
+
+        <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;font-size:0.875rem;" id="order-summary">
+          <div style="display:flex;justify-content:space-between;color:var(--text-secondary);">
+            <span>Servicio</span>
+            <span id="summary-service" style="color:var(--text-primary);font-weight:500;text-align:right;max-width:180px;">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--text-secondary);">
+            <span>Cantidad</span>
+            <span id="summary-qty" style="color:var(--text-primary);font-weight:500;">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:var(--text-secondary);">
+            <span>Precio / 1000</span>
+            <span id="summary-rate" style="color:var(--text-primary);font-weight:500;">—</span>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-weight:700;">Total Estimado</span>
+            <span id="summary-total" style="font-weight:800;font-size:1.1rem;" class="gradient-text">—</span>
+          </div>
+        </div>
+
+        <div id="summary-empty" style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.8rem;">
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          Completá el formulario para ver el resumen
+        </div>
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<style>
+  @media (max-width: 768px) {
+    #order-layout {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+
+<script>
+  interface Service {
+    service: number;
+    name: string;
+    type: string;
+    category: string;
+    rate: string;
+    min: string;
+    max: string;
+    refill: boolean;
+    cancel: boolean;
+  }
+
+  let services: Service[] = [];
+  let selectedService: Service | null = null;
+
+  const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
+  const serviceSelect = document.getElementById('service-select') as HTMLSelectElement;
+  const quantityInput = document.getElementById('order-quantity') as HTMLInputElement;
+  const linkInput = document.getElementById('order-link') as HTMLInputElement;
+  const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
+
+  // Load services
+  async function loadServices() {
+    try {
+      const res = await fetch('/api/smm/services');
+      const data = await res.json();
+      services = data.services || [];
+
+      // Priority sorting for categories
+      const priority: Record<string, number> = {
+        'instagram': 1, 'ig': 1,
+        'tiktok': 2, 'tik tok': 2,
+        'youtube': 3, 'yt': 3,
+        'facebook': 4, 'fb': 4,
+        'twitter': 5, 'x ': 5,
+        'telegram': 6,
+        'spotify': 7,
+        'twitch': 8,
+        'linkedin': 9,
+        'website': 10, 'traffic': 10,
+        'kick': 11,
+        'vimeo': 12,
+        'pinterest': 13,
+        'snapchat': 14,
+        'discord': 15,
+        'threads': 16,
+        'reddit': 17,
+        'soundcloud': 18
+      };
+
+      function getCatPriority(cat: string) {
+        const lower = cat.toLowerCase();
+        for (const [key, val] of Object.entries(priority)) {
+          if (lower.includes(key)) return val;
+        }
+        return 99;
+      }
+
+      function getCategoryIcon(name: string) {
+        const lower = name.toLowerCase();
+        if (lower.includes('instagram') || lower.includes('ig ')) return '<i class="fa-brands fa-instagram" style="color:#E1306C"></i>';
+        if (lower.includes('tiktok') || lower.includes('tik tok')) return '<i class="fa-brands fa-tiktok" style="color:#00f2fe"></i>';
+        if (lower.includes('youtube') || lower.includes('yt ')) return '<i class="fa-brands fa-youtube" style="color:#FF0000"></i>';
+        if (lower.includes('facebook') || lower.includes('fb ')) return '<i class="fa-brands fa-facebook" style="color:#1877F2"></i>';
+        if (lower.includes('twitter') || lower.includes('x ')) return '<i class="fa-brands fa-x-twitter" style="color:#ffffff"></i>';
+        if (lower.includes('telegram')) return '<i class="fa-brands fa-telegram" style="color:#0088cc"></i>';
+        if (lower.includes('spotify')) return '<i class="fa-brands fa-spotify" style="color:#1DB954"></i>';
+        if (lower.includes('twitch')) return '<i class="fa-brands fa-twitch" style="color:#9146FF"></i>';
+        if (lower.includes('linkedin')) return '<i class="fa-brands fa-linkedin" style="color:#0A66C2"></i>';
+        if (lower.includes('kick')) return '<i class="fa-solid fa-k" style="color:#53fc18"></i>';
+        if (lower.includes('vimeo')) return '<i class="fa-brands fa-vimeo-v" style="color:#1ab7ea"></i>';
+        if (lower.includes('pinterest')) return '<i class="fa-brands fa-pinterest" style="color:#BD081C"></i>';
+        if (lower.includes('snapchat') || lower.includes('snap')) return '<i class="fa-brands fa-snapchat" style="color:#FFFC00"></i>';
+        if (lower.includes('discord')) return '<i class="fa-brands fa-discord" style="color:#5865F2"></i>';
+        if (lower.includes('threads')) return '<i class="fa-brands fa-threads" style="color:#ffffff"></i>';
+        if (lower.includes('reddit')) return '<i class="fa-brands fa-reddit" style="color:#FF4500"></i>';
+        if (lower.includes('soundcloud')) return '<i class="fa-brands fa-soundcloud" style="color:#ff5500"></i>';
+        if (lower.includes('website') || lower.includes('traffic')) return '<i class="fa-solid fa-globe" style="color:#a8b2d1"></i>';
+        return '<i class="fa-solid fa-layer-group" style="color:#a8b2d1"></i>';
+      }
+
+      // Get unique categories and sort
+      const categories = [...new Set(services.map((s) => s.category))].sort((a, b) => {
+        const pA = getCatPriority(a);
+        const pB = getCatPriority(b);
+        if (pA !== pB) return pA - pB;
+        return a.localeCompare(b);
+      });
+
+      categoryFilter.innerHTML = `<option value="">— Todas las categorías —</option>`;
+      const quickCategoriesEl = document.getElementById('quick-categories')!;
+      quickCategoriesEl.innerHTML = '';
+      
+      const seenPopular = new Set();
+
+      // Show only first 10 popular, then a "+" button that reveals the rest
+      let shownCount = 0;
+      const extraBtns: HTMLButtonElement[] = [];
+
+      categories.forEach((cat) => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryFilter.appendChild(opt);
+
+        // Quick Category Chips
+        const p = getCatPriority(cat);
+        if (p < 99 && !seenPopular.has(p)) {
+          seenPopular.add(p);
+          shownCount++;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quick-cat-btn';
+          btn.innerHTML = `${getCategoryIcon(cat)}`;
+          btn.title = cat;
+          btn.style.cssText = 'background:var(--bg-input);border:1px solid var(--border);border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.5rem;transition:all 0.2s;flex-shrink:0;';
+          
+          // Hide extra ones initially (beyond first 10)
+          if (shownCount > 10) {
+            btn.style.display = 'none';
+            extraBtns.push(btn);
+          }
+          
+          btn.addEventListener('click', () => {
+            const matchingCat = categories.find(c => getCatPriority(c) === p);
+            if (matchingCat) {
+              categoryFilter.value = matchingCat;
+              categoryFilter.dispatchEvent(new Event('change'));
+              document.querySelectorAll('.quick-cat-btn').forEach((el: any) => el.style.borderColor = 'var(--border)');
+              btn.style.borderColor = 'var(--accent)';
+            }
+          });
+          quickCategoriesEl.appendChild(btn);
+        }
+      });
+
+      // Add "+" button if there are hidden extras
+      if (extraBtns.length > 0) {
+        const plusBtn = document.createElement('button');
+        plusBtn.type = 'button';
+        plusBtn.className = 'quick-cat-btn';
+        plusBtn.innerHTML = `<i class="fa-solid fa-plus" style="color:var(--accent)"></i>`;
+        plusBtn.title = 'Más plataformas';
+        plusBtn.style.cssText = 'background:var(--bg-input);border:1px solid var(--accent);border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.25rem;transition:all 0.2s;flex-shrink:0;';
+        plusBtn.addEventListener('click', () => {
+          extraBtns.forEach(b => b.style.display = 'flex');
+          plusBtn.style.display = 'none';
+        });
+        quickCategoriesEl.appendChild(plusBtn);
+      }
+
+      // Check query parameters to auto-select from Services page
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramCat = urlParams.get('category');
+      const paramService = urlParams.get('service');
+
+      if (paramCat) {
+        categoryFilter.value = paramCat;
+      }
+      populateServices();
+
+      if (paramService) {
+        serviceSelect.value = paramService;
+        serviceSelect.dispatchEvent(new Event('change'));
+      }
+    } catch {
+      categoryFilter.innerHTML = '<option value="">Error al cargar. Recargá la página.</option>';
+    }
+  }
+
+  // Populate services when category changes
+  function populateServices() {
+    const cat = categoryFilter.value;
+    const searchTerm = (document.getElementById('service-search') as HTMLInputElement)?.value.toLowerCase() || '';
+    const priceSort = (document.getElementById('price-sort') as HTMLSelectElement)?.value || '';
+    
+    let filtered = cat ? services.filter((s) => s.category === cat) : services;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(searchTerm) || 
+        s.category.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Apply price sort
+    if (priceSort === 'asc') {
+      filtered = [...filtered].sort((a, b) => parseFloat(a.rate) - parseFloat(b.rate));
+    } else if (priceSort === 'desc') {
+      filtered = [...filtered].sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate));
+    }
+
+    serviceSelect.innerHTML = '<option value="">— Seleccioná un servicio —</option>';
+    function getCategoryEmoji(name: string, category: string) {
+      const str = (name + ' ' + category).toLowerCase();
+      if (str.includes('instagram') || str.includes('ig ')) return '📷 ';
+      if (str.includes('tiktok') || str.includes('tik tok')) return '🎵 ';
+      if (str.includes('youtube') || str.includes('yt ')) return '▶️ ';
+      if (str.includes('facebook') || str.includes('fb ')) return '📘 ';
+      if (str.includes('twitter') || str.includes('x ')) return '🐦 ';
+      if (str.includes('telegram')) return '✈️ ';
+      if (str.includes('spotify')) return '🎧 ';
+      if (str.includes('twitch')) return '🎮 ';
+      if (str.includes('linkedin')) return '💼 ';
+      if (str.includes('kick')) return '🟢 ';
+      if (str.includes('vimeo')) return '🎬 ';
+      if (str.includes('pinterest')) return '📌 ';
+      if (str.includes('snapchat') || str.includes('snap')) return '👻 ';
+      if (str.includes('discord')) return '💬 ';
+      if (str.includes('threads')) return '🧵 ';
+      if (str.includes('reddit')) return '🔶 ';
+      if (str.includes('soundcloud')) return '🔊 ';
+      return '🔹 ';
+    }
+
+    filtered.forEach((s) => {
+      const opt = document.createElement('option');
+      opt.value = s.service.toString();
+      const prefix = getCategoryEmoji(s.name, s.category);
+      opt.textContent = `${prefix}${s.name} ($${s.rate}/1000)`;
+      opt.dataset.rate = s.rate;
+      opt.dataset.min = s.min;
+      opt.dataset.max = s.max;
+      opt.dataset.refill = s.refill.toString();
+      opt.dataset.cancel = s.cancel.toString();
+      opt.dataset.name = s.name;
+      opt.dataset.category = s.category;
+      serviceSelect.appendChild(opt);
+    });
+
+    selectedService = null;
+    updateServiceInfo(null);
+    updateSummary();
+    submitBtn.disabled = true;
+  }
+
+  // Wire up events
+  categoryFilter.addEventListener('change', populateServices);
+  
+  const serviceSearchInput = document.getElementById('service-search') as HTMLInputElement;
+  if (serviceSearchInput) {
+    let searchDebounce: any;
+    serviceSearchInput.addEventListener('input', () => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(populateServices, 300);
+    });
+  }
+  
+  const priceSortSelect = document.getElementById('price-sort') as HTMLSelectElement;
+  if (priceSortSelect) {
+    priceSortSelect.addEventListener('change', populateServices);
+  }
+
+  serviceSelect.addEventListener('change', () => {
+    const id = parseInt(serviceSelect.value);
+    selectedService = services.find((s) => s.service === id) || null;
+    updateServiceInfo(selectedService);
+    updateSummary();
+    submitBtn.disabled = !selectedService;
+
+    if (selectedService) {
+      quantityInput.min = selectedService.min;
+      quantityInput.max = selectedService.max;
+      quantityInput.placeholder = `${selectedService.min} – ${selectedService.max}`;
+    }
+  });
+
+  quantityInput.addEventListener('input', updateSummary);
+
+  let liveDolarRate = 1350;
+  async function fetchDolar() {
+    try {
+      const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+      const data = await res.json();
+      if (data && data.venta) liveDolarRate = data.venta;
+    } catch {}
+  }
+  fetchDolar();
+
+  function updateServiceInfo(service: Service | null) {
+    const infoEl = document.getElementById('service-info')!;
+    if (!service) {
+      infoEl.style.display = 'none';
+      return;
+    }
+
+    const rateNum = parseFloat(service.rate);
+    const arsRate = rateNum * liveDolarRate;
+
+    infoEl.style.display = 'block';
+    document.getElementById('info-rate')!.innerHTML = `$${rateNum.toFixed(4)} USD <span style="font-size:0.75rem;color:var(--text-muted);font-weight:normal;">(~$${arsRate.toFixed(2)} ARS)</span>`;
+    document.getElementById('info-min')!.textContent = parseInt(service.min).toLocaleString('es-AR');
+    document.getElementById('info-max')!.textContent = parseInt(service.max).toLocaleString('es-AR');
+
+    const badges = document.getElementById('info-badges')!;
+    badges.innerHTML = '';
+    if (service.refill) {
+      badges.innerHTML += '<span class="badge badge--success"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Refill</span>';
+    }
+    if (service.cancel) {
+      badges.innerHTML += '<span class="badge badge--cyan"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Cancelable</span>';
+    }
+    badges.innerHTML += `<span class="badge badge--accent">${service.type}</span>`;
+  }
+
+  function updateSummary() {
+    const summaryService = document.getElementById('summary-service')!;
+    const summaryQty = document.getElementById('summary-qty')!;
+    const summaryRate = document.getElementById('summary-rate')!;
+    const summaryTotal = document.getElementById('summary-total')!;
+    const summaryEmpty = document.getElementById('summary-empty')!;
+
+    if (!selectedService) {
+      summaryService.textContent = '—';
+      summaryQty.textContent = '—';
+      summaryRate.textContent = '—';
+      summaryTotal.textContent = '—';
+      summaryEmpty.style.display = 'block';
+      return;
+    }
+
+    const rateNum = parseFloat(selectedService.rate);
+    const arsRate = rateNum * liveDolarRate;
+
+    summaryEmpty.style.display = 'none';
+    summaryService.textContent = selectedService.name;
+    summaryRate.innerHTML = `$${rateNum.toFixed(4)} USD <span style="font-size:0.75rem;color:var(--text-muted);">(~$${arsRate.toFixed(2)} ARS)</span>`;
+
+    const qty = parseInt(quantityInput.value) || 0;
+    summaryQty.textContent = qty ? qty.toLocaleString('es-AR') : '—';
+
+    if (qty > 0) {
+      const totalUSD = (rateNum * qty) / 1000;
+      const totalARS = totalUSD * liveDolarRate;
+      summaryTotal.innerHTML = `$${totalUSD.toFixed(4)} USD <span style="font-size:0.85rem;color:var(--text-secondary);font-weight:600;display:block;">(~$${totalARS.toFixed(2)} ARS)</span>`;
+    } else {
+      summaryTotal.textContent = '—';
+    }
+  }
+
+  // Form submit
+  const form = document.getElementById('new-order-form') as HTMLFormElement;
+  const orderError = document.getElementById('order-error')!;
+  const orderSuccess = document.getElementById('order-success')!;
+  const linkError = document.getElementById('link-error')!;
+  const quantityError = document.getElementById('quantity-error')!;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    linkError.style.display = 'none';
+    quantityError.style.display = 'none';
+    orderError.style.display = 'none';
+    orderSuccess.style.display = 'none';
+
+    const link = linkInput.value.trim();
+    const qty = parseInt(quantityInput.value);
+    let valid = true;
+
+    if (!link || (!link.startsWith('http://') && !link.startsWith('https://'))) {
+      linkError.style.display = 'flex';
+      valid = false;
+    }
+
+    if (!selectedService || !qty) {
+      quantityError.style.display = 'flex';
+      valid = false;
+    } else if (qty < parseInt(selectedService.min) || qty > parseInt(selectedService.max)) {
+      quantityError.style.display = 'flex';
+      (document.getElementById('quantity-error-msg')!).textContent =
+        `La cantidad debe estar entre ${selectedService.min} y ${selectedService.max}`;
+      valid = false;
+    }
+
+    if (!valid || !selectedService) return;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Procesando...';
+
+    const formData = new FormData();
+    formData.append('service_id', selectedService.service.toString());
+    formData.append('service_name', selectedService.name);
+    formData.append('category', selectedService.category);
+    formData.append('link', link);
+    formData.append('quantity', qty.toString());
+    formData.append('rate', selectedService.rate);
+
+    try {
+      const res = await fetch('/api/smm/order', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        orderSuccess.style.display = 'flex';
+        orderSuccess.innerHTML = `<i class="fa-solid fa-check-circle"></i> ¡Pedido #${data.order_id} creado exitosamente!`;
+        form.reset();
+        selectedService = null;
+        updateServiceInfo(null);
+        updateSummary();
+        submitBtn.disabled = true;
+      } else {
+        orderError.style.display = 'flex';
+        orderError.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.error || 'Error al crear el pedido'}`;
+        submitBtn.disabled = false;
+      }
+    } catch {
+      orderError.style.display = 'flex';
+      orderError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Intentá de nuevo.';
+      submitBtn.disabled = false;
+    }
+
+    submitBtn.innerHTML = '<i class="fa-solid fa-rocket"></i> Hacer Pedido';
+  });
+
+  loadServices();
+</script>

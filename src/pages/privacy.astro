@@ -1,0 +1,231 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Política de Privacidad — Pulse Panel Boost"
+  description="Política de privacidad y tratamiento de datos personales de Pulse Panel Boost."
+>
+  <header class="navbar">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="Pulse Panel Boost - Inicio">
+          <div class="navbar__logo-icon"><i class="fa-solid fa-bolt"></i></div>
+          <span class="navbar__logo-text">Pulse<span>Boost</span></span>
+        </a>
+        <div class="navbar__actions" style="margin-left:auto;">
+          <a href="/" class="btn btn--ghost btn--sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding:4rem 0 6rem;">
+    <div class="container container--narrow">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:3rem;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:linear-gradient(135deg,rgba(6,182,212,0.2),rgba(124,58,237,0.2));border:1px solid var(--cyan);border-radius:var(--radius-lg);font-size:1.75rem;color:var(--cyan);margin-bottom:1.25rem;">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h1 style="font-size:clamp(1.75rem,4vw,2.5rem);margin-bottom:0.75rem;">Política de Privacidad</h1>
+        <p style="color:var(--text-secondary);font-size:0.95rem;">Última actualización: septiembre 2026</p>
+      </div>
+
+      <!-- Intro -->
+      <div class="card" style="margin-bottom:1.5rem;border-color:var(--cyan);background:var(--cyan-dim);">
+        <p style="font-size:0.95rem;line-height:1.8;color:var(--text-secondary);">
+          En <strong style="color:var(--text-primary);">Pulse Panel Boost</strong> tomamos tu privacidad muy en serio. Esta política describe cómo recopilamos, usamos y protegemos tu información personal cuando utilizás nuestra plataforma.
+        </p>
+      </div>
+
+      <!-- Sections -->
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:var(--accent-dim);color:var(--accent-light);">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <h2>1. Información que recopilamos</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Recopilamos la siguiente información cuando utilizás nuestra plataforma:</p>
+          <ul>
+            <li><strong>Datos de registro:</strong> nombre, dirección de email y contraseña (almacenada de forma encriptada con bcrypt).</li>
+            <li><strong>Datos de pedidos:</strong> enlaces de perfiles o publicaciones, servicios contratados, cantidades y estados de pedidos.</li>
+            <li><strong>Datos técnicos:</strong> dirección IP (usada únicamente para prevención de fraude y rate limiting), tipo de navegador, fecha y hora de acceso.</li>
+            <li><strong>Datos de transacciones:</strong> historial de depósitos y consumo de saldo dentro de la plataforma.</li>
+          </ul>
+          <p><strong>No recopilamos</strong> contraseñas de redes sociales, métodos de pago directos (procesados por terceros) ni información sensible más allá de la necesaria para prestar el servicio.</p>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:var(--cyan-dim);color:var(--cyan);">
+            <i class="fa-solid fa-gear"></i>
+          </div>
+          <h2>2. Cómo utilizamos tu información</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Utilizamos tu información exclusivamente para:</p>
+          <ul>
+            <li>Crear y gestionar tu cuenta en la plataforma.</li>
+            <li>Procesar y ejecutar los pedidos que realizás.</li>
+            <li>Enviarte notificaciones relacionadas con tus pedidos y cuenta (nunca spam comercial).</li>
+            <li>Prevenir fraudes y proteger la seguridad de la plataforma.</li>
+            <li>Cumplir con obligaciones legales cuando sea requerido.</li>
+            <li>Mejorar la calidad y funcionamiento de nuestros servicios.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:rgba(16,185,129,0.15);color:var(--success);">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <h2>3. Seguridad de tus datos</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Implementamos múltiples capas de seguridad para proteger tu información:</p>
+          <ul>
+            <li>Las contraseñas son hasheadas con <strong>bcrypt</strong> antes de almacenarse. Nunca guardamos contraseñas en texto plano.</li>
+            <li>La autenticación se realiza mediante <strong>tokens JWT</strong> con expiración automática.</li>
+            <li>Las conexiones con nuestra base de datos utilizan <strong>SSL obligatorio</strong>.</li>
+            <li>Implementamos <strong>rate limiting</strong> para prevenir ataques de fuerza bruta.</li>
+            <li>Los datos se almacenan en servidores con encriptación en reposo.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:rgba(245,158,11,0.15);color:var(--warning);">
+            <i class="fa-solid fa-share-nodes"></i>
+          </div>
+          <h2>4. Compartir información con terceros</h2>
+        </div>
+        <div class="priv-section__body">
+          <p><strong>No vendemos ni alquilamos</strong> tu información personal a terceros. Podemos compartir datos mínimos necesarios con:</p>
+          <ul>
+            <li><strong>Proveedores de servicios SMM:</strong> los enlaces de perfil/publicación necesarios para ejecutar los pedidos contratados.</li>
+            <li><strong>Procesadores de pago:</strong> datos necesarios para completar transacciones, que se rigen por sus propias políticas de privacidad.</li>
+            <li><strong>Autoridades legales:</strong> únicamente cuando sea requerido por ley o para proteger nuestros derechos legales.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:var(--accent-dim);color:var(--accent-light);">
+            <i class="fa-solid fa-cookie-bite"></i>
+          </div>
+          <h2>5. Cookies y sesiones</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Utilizamos cookies y almacenamiento local únicamente para:</p>
+          <ul>
+            <li><strong>Sesión de usuario:</strong> cookie httpOnly segura que mantiene tu sesión activa.</li>
+            <li><strong>Preferencias:</strong> almacenamiento local para guardar tu preferencia de tema (oscuro/claro).</li>
+          </ul>
+          <p>No utilizamos cookies de rastreo, publicidad ni analytics de terceros.</p>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:var(--cyan-dim);color:var(--cyan);">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <h2>6. Tus derechos</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Tenés derecho a:</p>
+          <ul>
+            <li><strong>Acceder</strong> a los datos personales que tenemos sobre vos.</li>
+            <li><strong>Rectificar</strong> datos incorrectos o desactualizados desde tu panel de control.</li>
+            <li><strong>Eliminar</strong> tu cuenta y los datos asociados contactando a nuestro soporte.</li>
+            <li><strong>Oponerte</strong> al procesamiento de tus datos en casos específicos previstos por la ley.</li>
+          </ul>
+          <p>Para ejercer estos derechos, contactanos a través de nuestros canales de soporte.</p>
+        </div>
+      </div>
+
+      <div class="priv-section">
+        <div class="priv-section__header">
+          <div class="priv-section__icon" style="background:var(--accent-dim);color:var(--accent-light);">
+            <i class="fa-solid fa-rotate"></i>
+          </div>
+          <h2>7. Cambios a esta política</h2>
+        </div>
+        <div class="priv-section__body">
+          <p>Podemos actualizar esta Política de Privacidad periódicamente. Te notificaremos sobre cambios significativos publicando la nueva versión en esta página con la fecha de actualización. El uso continuado de la plataforma tras los cambios implica tu aceptación.</p>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div style="text-align:center;margin-top:3rem;padding:2rem;background:linear-gradient(135deg,rgba(6,182,212,0.08),rgba(124,58,237,0.05));border:1px solid var(--border);border-radius:var(--radius-xl);">
+        <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:1.25rem;">¿Tenés preguntas sobre cómo usamos tus datos?</p>
+        <a href="/contact" class="btn btn--cyan">
+          <i class="fa-solid fa-envelope"></i>
+          Contactar Soporte
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__bottom" style="border-top:none;padding-top:0;">
+        <p class="footer__copyright">© 2026 Pulse Panel Boost. Todos los derechos reservados.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <a href="/terms" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">Términos de Uso</a>
+          <a href="/privacy" style="font-size:0.8rem;color:var(--accent-light);text-decoration:none;">Política de Privacidad</a>
+          <a href="/contact" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">Contacto</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  .priv-section {
+    margin-bottom: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+  }
+  .priv-section:hover { border-color: var(--border-hover); }
+  .priv-section__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .priv-section__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+  }
+  .priv-section__header h2 { font-size: 1.05rem; margin: 0; }
+  .priv-section__body {
+    padding: 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.8;
+  }
+  .priv-section__body p { margin-bottom: 0.75rem; }
+  .priv-section__body ul { padding-left: 1.25rem; margin-bottom: 0.75rem; }
+  .priv-section__body ul li { margin-bottom: 0.4rem; }
+  .priv-section__body strong { color: var(--text-primary); }
+</style>

@@ -1,0 +1,245 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import sql from '../../lib/db';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+
+const statusFilter = Astro.url.searchParams.get('status') || '';
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 20;
+const offset = (page - 1) * limit;
+
+let orders: any[] = [];
+let totalCount = 0;
+
+try {
+  if (statusFilter) {
+    orders = await sql`
+      SELECT id, smm_order_id, service_name, category, link, quantity, charge, status, remains, start_count, created_at, updated_at
+      FROM orders
+      WHERE user_id = ${session.userId} AND status = ${statusFilter}
+      ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    const count = await sql`
+      SELECT COUNT(*) as total FROM orders WHERE user_id = ${session.userId} AND status = ${statusFilter}
+    `;
+    totalCount = parseInt(count[0].total);
+  } else {
+    orders = await sql`
+      SELECT id, smm_order_id, service_name, category, link, quantity, charge, status, remains, start_count, created_at, updated_at
+      FROM orders
+      WHERE user_id = ${session.userId}
+      ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    const count = await sql`SELECT COUNT(*) as total FROM orders WHERE user_id = ${session.userId}`;
+    totalCount = parseInt(count[0].total);
+  }
+} catch (e) {
+  console.error('Orders DB error:', e);
+}
+
+const totalPages = Math.ceil(totalCount / limit);
+
+function getStatusBadge(status: string) {
+  const map: Record<string, string> = {
+    'Completed': 'badge--success',
+    'In progress': 'badge--cyan',
+    'Pending': 'badge--warning',
+    'Partial': 'badge--accent',
+    'Canceled': 'badge--danger',
+    'Processing': 'badge--cyan',
+  };
+  return map[status] || 'badge--warning';
+}
+
+function formatDate(date: Date | string) {
+  return new Date(date).toLocaleDateString('es-AR', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+const statusOptions = ['', 'Pending', 'In progress', 'Completed', 'Partial', 'Canceled'];
+---
+
+<DashboardLayout title="Mis Pedidos" activeNav="orders">
+  <div class="dashboard-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
+          Mis <span class="gradient-text">Pedidos</span>
+        </h1>
+        <p style="color:var(--text-secondary);font-size:0.875rem;">
+          {totalCount} pedido{totalCount !== 1 ? 's' : ''} en total
+        </p>
+      </div>
+      <a href="/dashboard/new-order" class="btn btn--primary" id="orders-new-order-btn">
+        <i class="fa-solid fa-circle-plus" aria-hidden="true"></i>
+        Nuevo Pedido
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;" role="group" aria-label="Filtros de estado">
+    {statusOptions.map((s) => (
+      <a
+        href={s ? `?status=${s}` : '/dashboard/orders'}
+        class={`btn ${statusFilter === s ? 'btn--primary btn--sm' : 'btn--ghost btn--sm'}`}
+      >
+        {s || 'Todos'}
+      </a>
+    ))}
+  </div>
+
+  <!-- Table -->
+  {orders.length === 0 ? (
+    <div class="card" style="text-align:center;padding:3rem;">
+      <i class="fa-solid fa-inbox" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;display:block;" aria-hidden="true"></i>
+      <h3 style="color:var(--text-secondary);margin-bottom:0.5rem;">Sin pedidos</h3>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem;">
+        {statusFilter ? `No hay pedidos con estado "${statusFilter}"` : 'Aún no hiciste ningún pedido'}
+      </p>
+      <a href="/dashboard/new-order" class="btn btn--primary" id="empty-orders-cta">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        Crear primer pedido
+      </a>
+    </div>
+  ) : (
+    <div class="table-wrapper" role="region" aria-label="Lista de pedidos">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">ID SMM</th>
+            <th scope="col">Servicio</th>
+            <th scope="col">Enlace</th>
+            <th scope="col">Cantidad</th>
+            <th scope="col">Cargo</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr>
+              <td>
+                <span style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">
+                  #{order.smm_order_id || '—'}
+                </span>
+              </td>
+              <td>
+                <div style="max-width:180px;">
+                  <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    {order.service_name || 'Servicio'}
+                  </div>
+                  {order.category && (
+                    <div style="font-size:0.7rem;color:var(--text-muted);">{order.category}</div>
+                  )}
+                </div>
+              </td>
+              <td>
+                <a
+                  href={order.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="font-size:0.78rem;color:var(--accent-light);max-width:140px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;"
+                  title={order.link}
+                >
+                  {order.link}
+                </a>
+              </td>
+              <td style="font-size:0.875rem;">{order.quantity.toLocaleString('es-AR')}</td>
+              <td style="font-size:0.875rem;font-weight:600;color:var(--success);">
+                ${parseFloat(order.charge || 0).toFixed(4)}
+              </td>
+              <td>
+                <span class={`badge ${getStatusBadge(order.status)}`}>
+                  {order.status}
+                </span>
+              </td>
+              <td style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">
+                {formatDate(order.created_at)}
+              </td>
+              <td>
+                <div style="display:flex;gap:0.25rem;">
+                  {order.smm_order_id && (
+                    <button
+                      class="btn btn--ghost btn--sm refill-btn"
+                      data-order-id={order.smm_order_id}
+                      title="Solicitar Refill"
+                      aria-label="Solicitar Refill"
+                      style="padding:0.375rem 0.625rem;"
+                    >
+                      <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <!-- Pagination -->
+  {totalPages > 1 && (
+    <div style="display:flex;gap:0.5rem;justify-content:center;margin-top:1.5rem;" role="navigation" aria-label="Paginación">
+      {page > 1 && (
+        <a href={`?${statusFilter ? `status=${statusFilter}&` : ''}page=${page - 1}`} class="btn btn--ghost btn--sm">
+          <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+          Anterior
+        </a>
+      )}
+      <span style="display:flex;align-items:center;font-size:0.875rem;color:var(--text-secondary);padding:0 0.5rem;">
+        Página {page} de {totalPages}
+      </span>
+      {page < totalPages && (
+        <a href={`?${statusFilter ? `status=${statusFilter}&` : ''}page=${page + 1}`} class="btn btn--ghost btn--sm">
+          Siguiente
+          <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+        </a>
+      )}
+    </div>
+  )}
+</DashboardLayout>
+
+<script>
+  // Refill buttons
+  document.querySelectorAll('.refill-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const orderId = (btn as HTMLElement).dataset.orderId;
+      if (!orderId) return;
+
+      const confirmed = confirm(`¿Solicitar refill para el pedido #${orderId}?`);
+      if (!confirmed) return;
+
+      (btn as HTMLButtonElement).disabled = true;
+      (btn as HTMLElement).innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;"></span>';
+
+      try {
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+
+        const res = await fetch('/api/smm/refill', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          alert(`Refill #${data.refill_id} creado exitosamente`);
+        } else {
+          alert(data.error || 'Error al crear refill');
+        }
+      } catch {
+        alert('Error de conexión');
+      }
+
+      (btn as HTMLButtonElement).disabled = false;
+      (btn as HTMLElement).innerHTML = '<i class="fa-solid fa-rotate"></i>';
+    });
+  });
+</script>

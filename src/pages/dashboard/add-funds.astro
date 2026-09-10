@@ -1,0 +1,186 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import sql from '../../lib/db';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+
+let successMsg = '';
+let errorMsg = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const amount = parseFloat(formData.get('amount')?.toString() || '0');
+    const method = formData.get('method')?.toString() || '';
+    const transactionId = formData.get('transactionId')?.toString() || '';
+
+    if (amount > 0 && method && transactionId) {
+      await sql`
+        INSERT INTO payments (user_id, amount, method, transaction_id, status)
+        VALUES (${session.userId}, ${amount}, ${method}, ${transactionId}, 'pending')
+      `;
+      successMsg = 'Solicitud de fondos enviada. El saldo se acreditará una vez que el administrador verifique el pago.';
+    } else {
+      errorMsg = 'Por favor, completá todos los campos correctamente.';
+    }
+  } catch (error) {
+    console.error('Add funds error:', error);
+    errorMsg = 'Hubo un error al procesar la solicitud. Intentá de nuevo.';
+  }
+}
+---
+
+<DashboardLayout title="Agregar Fondos" activeNav="add-funds">
+  <div class="dashboard-header">
+    <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
+      <span class="gradient-text">Agregar</span> Fondos
+    </h1>
+    <p style="color:var(--text-secondary);font-size:0.875rem;">
+      Depositá saldo en tu cuenta mediante Transferencia o Criptomonedas.
+    </p>
+  </div>
+
+  {successMsg && (
+    <div style="background:rgba(16,185,129,0.15);border:1px solid var(--success);color:var(--success);padding:1rem;border-radius:var(--radius-md);margin-bottom:1.5rem;font-size:0.9rem;font-weight:500;">
+      <i class="fa-solid fa-circle-check" style="margin-right:0.5rem;"></i> {successMsg}
+    </div>
+  )}
+
+  {errorMsg && (
+    <div style="background:rgba(239,68,68,0.15);border:1px solid var(--danger);color:var(--danger);padding:1rem;border-radius:var(--radius-md);margin-bottom:1.5rem;font-size:0.9rem;font-weight:500;">
+      <i class="fa-solid fa-triangle-exclamation" style="margin-right:0.5rem;"></i> {errorMsg}
+    </div>
+  )}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" id="funds-layout">
+    <!-- Payment Info -->
+    <div style="display:flex;flex-direction:column;gap:1.5rem;">
+      <!-- Transferencia Bancaria -->
+      <div class="card" style="padding:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(59, 130, 246, 0.15);color:var(--info);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div>
+            <h3 style="font-size:1rem;color:var(--text-primary);margin:0;">Transferencia Bancaria</h3>
+            <div style="font-size:0.75rem;color:var(--text-muted);">ARS - MercadoPago / Bancos</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">
+            <span style="color:var(--text-secondary);">CBU/CVU:</span>
+            <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;">0000003100000000000000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+            <span style="color:var(--text-secondary);">Alias:</span>
+            <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;">pulse.panel.mp</span>
+          </div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">
+          * Valor del dólar tomado a cotización Crypto.
+        </p>
+      </div>
+
+      <!-- Criptomonedas -->
+      <div class="card" style="padding:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+          <div style="width:40px;height:40px;border-radius:10px;background:rgba(245, 158, 11, 0.15);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+            <i class="fa-brands fa-bitcoin"></i>
+          </div>
+          <div>
+            <h3 style="font-size:1rem;color:var(--text-primary);margin:0;">Criptomonedas</h3>
+            <div style="font-size:0.75rem;color:var(--text-muted);">USDT (TRC20 / BSC)</div>
+          </div>
+        </div>
+        <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;overflow:hidden;word-break:break-all;">
+          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.25rem;">Billetera (USDT TRC20):</div>
+          <div style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;font-size:0.8rem;">
+            TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notify Form -->
+    <div class="card" style="padding:1.5rem;height:fit-content;">
+      <h3 style="font-size:1.1rem;color:var(--text-primary);margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+        <i class="fa-solid fa-file-invoice-dollar" style="color:var(--accent);"></i>
+        Notificar Pago
+      </h3>
+      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;">
+        Una vez que hayas realizado el pago, completá este formulario para que podamos acreditar el saldo en tu cuenta.
+      </p>
+
+      <form method="POST" style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="form-group">
+          <label class="form-label">Método utilizado</label>
+          <select name="method" class="form-input" required>
+            <option value="">— Seleccioná el método —</option>
+            <option value="transfer">Transferencia Bancaria (ARS)</option>
+            <option value="crypto">Criptomonedas (USDT)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Monto enviado (en USD)</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-dollar-sign"></i>
+            <input type="number" id="funds-amount" name="amount" class="form-input" placeholder="Ej: 10.00" step="0.01" min="1" required />
+          </div>
+          <div id="ars-calc-preview" style="margin-top:0.5rem;font-size:0.85rem;color:var(--text-secondary);font-weight:600;">
+            Total en Pesos: <span style="color:var(--success);" id="calc-ars-amount">$0.00 ARS</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ID de Transacción / Comprobante</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-receipt"></i>
+            <input type="text" name="transactionId" class="form-input" placeholder="Nro de operación o hash de tx" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn--primary" style="width:100%;margin-top:0.5rem;">
+          Enviar Solicitud
+        </button>
+      </form>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script>
+  let rate = 1350;
+  async function fetchRate() {
+    try {
+      const res = await fetch('https://dolarapi.com/v1/dolares/blue');
+      const data = await res.json();
+      if (data && data.venta) {
+        rate = data.venta;
+        const rateEl = document.getElementById('rate-transfer');
+        if (rateEl) rateEl.textContent = `1 USD = $${data.venta.toLocaleString('es-AR')} ARS`;
+      }
+    } catch {}
+  }
+  fetchRate();
+
+  const amountInput = document.getElementById('funds-amount') as HTMLInputElement;
+  const calcArs = document.getElementById('calc-ars-amount');
+
+  if (amountInput && calcArs) {
+    amountInput.addEventListener('input', () => {
+      const usd = parseFloat(amountInput.value) || 0;
+      const ars = usd * rate;
+      calcArs.textContent = `$${ars.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ARS`;
+    });
+  }
+</script>
+
+<style>
+  @media (max-width: 768px) {
+    #funds-layout {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>

@@ -1,0 +1,196 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Contacto — Pulse Panel Boost"
+  description="Contactá al equipo de soporte de Pulse Panel Boost. Estamos disponibles 24/7 para ayudarte."
+>
+  <header class="navbar">
+    <div class="container">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="Pulse Panel Boost - Inicio">
+          <div class="navbar__logo-icon"><i class="fa-solid fa-bolt"></i></div>
+          <span class="navbar__logo-text">Pulse<span>Boost</span></span>
+        </a>
+        <div class="navbar__actions" style="margin-left:auto;">
+          <a href="/" class="btn btn--ghost btn--sm"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding:4rem 0 6rem;">
+    <div class="container container--narrow">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:3rem;">
+        <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(6,182,212,0.2));border:1px solid var(--success);border-radius:var(--radius-lg);font-size:1.75rem;color:var(--success);margin-bottom:1.25rem;">
+          <i class="fa-solid fa-headset"></i>
+        </div>
+        <h1 style="font-size:clamp(1.75rem,4vw,2.5rem);margin-bottom:0.75rem;">Contacto y Soporte</h1>
+        <p style="color:var(--text-secondary);font-size:1rem;max-width:500px;margin:0 auto;line-height:1.7;">
+          Estamos disponibles <strong style="color:var(--text-primary);">24/7</strong> para ayudarte con cualquier consulta o problema.
+        </p>
+      </div>
+
+      <!-- Status bar -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:3rem;padding:0.75rem 1.5rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:var(--radius-full);font-size:0.875rem;color:var(--success);width:fit-content;margin-left:auto;margin-right:auto;">
+        <span class="status-dot status-dot--online"></span>
+        Soporte activo — tiempo de respuesta promedio: menos de 2 horas
+      </div>
+
+      <!-- Contact options -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:3rem;">
+
+        <!-- WhatsApp -->
+        <a
+          href="https://wa.me/549XXXXXXXXXX?text=Hola!%20Necesito%20ayuda%20con%20Pulse%20Panel%20Boost"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-card"
+          id="contact-whatsapp"
+          aria-label="Contactar por WhatsApp"
+        >
+          <div style="width:56px;height:56px;background:rgba(37,211,102,0.15);border:1px solid #25D366;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#25D366;margin-bottom:1rem;">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <h3>WhatsApp</h3>
+          <p>Soporte directo vía WhatsApp. Respuesta rápida para cualquier consulta urgente.</p>
+          <span class="contact-card__action" style="color:#25D366;">
+            Iniciar conversación <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </a>
+
+        <!-- Instagram -->
+        <a
+          href="https://www.instagram.com/pulsepanelboost"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-card"
+          id="contact-instagram"
+          aria-label="Seguinos en Instagram"
+        >
+          <div style="width:56px;height:56px;background:rgba(225,48,108,0.15);border:1px solid #E1306C;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#E1306C;margin-bottom:1rem;">
+            <i class="fa-brands fa-instagram"></i>
+          </div>
+          <h3>Instagram</h3>
+          <p>Seguinos para novedades, promociones exclusivas y soporte por DM.</p>
+          <span class="contact-card__action" style="color:#E1306C;">
+            Ver perfil <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </a>
+
+        <!-- Telegram -->
+        <a
+          href="https://t.me/pulsepanelboost"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="contact-card"
+          id="contact-telegram"
+          aria-label="Contactar por Telegram"
+        >
+          <div style="width:56px;height:56px;background:rgba(38,165,228,0.15);border:1px solid #26A5E4;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#26A5E4;margin-bottom:1rem;">
+            <i class="fa-brands fa-telegram"></i>
+          </div>
+          <h3>Telegram</h3>
+          <p>Comunidad oficial y soporte por Telegram. Notificaciones de nuevos servicios y ofertas.</p>
+          <span class="contact-card__action" style="color:#26A5E4;">
+            Abrir Telegram <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </a>
+
+        <!-- Dashboard -->
+        <a
+          href="/login"
+          class="contact-card"
+          id="contact-dashboard"
+          aria-label="Acceder al panel de control"
+        >
+          <div style="width:56px;height:56px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--accent-light);margin-bottom:1rem;">
+            <i class="fa-solid fa-gauge-high"></i>
+          </div>
+          <h3>Panel de Control</h3>
+          <p>Accedé a tu cuenta para gestionar pedidos, ver historial y contactar soporte desde el dashboard.</p>
+          <span class="contact-card__action" style="color:var(--accent-light);">
+            Ir al panel <i class="fa-solid fa-arrow-right"></i>
+          </span>
+        </a>
+
+      </div>
+
+      <!-- FAQ Reference -->
+      <div style="text-align:center;padding:2rem;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(6,182,212,0.05));border:1px solid var(--border);border-radius:var(--radius-xl);">
+        <h2 style="font-size:1.25rem;margin-bottom:0.5rem;">¿Buscás respuestas rápidas?</h2>
+        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.25rem;">
+          Revisá nuestras preguntas frecuentes antes de contactarnos, puede que ya tengamos la respuesta que buscás.
+        </p>
+        <a href="/#faq" class="btn btn--ghost">
+          <i class="fa-solid fa-circle-question"></i>
+          Ver Preguntas Frecuentes
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer__bottom" style="border-top:none;padding-top:0;">
+        <p class="footer__copyright">© 2026 Pulse Panel Boost. Todos los derechos reservados.</p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <a href="/terms" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">Términos de Uso</a>
+          <a href="/privacy" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">Política de Privacidad</a>
+          <a href="/contact" style="font-size:0.8rem;color:var(--accent-light);text-decoration:none;">Contacto</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>
+
+<style>
+  .contact-card {
+    display: block;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.25s ease;
+  }
+  .contact-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  }
+  .contact-card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+  .contact-card p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  .contact-card__action {
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: gap 0.2s ease;
+  }
+  .contact-card:hover .contact-card__action {
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 600px) {
+    .contact-card { padding: 1.25rem; }
+    main div[style*="grid-template-columns:1fr 1fr"] {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

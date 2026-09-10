@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0b10"/>
+      <stop offset="100%" stop-color="#11131a"/>
+    </linearGradient>
+    <linearGradient id="arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="28" fill="url(#bgGrad)"/>
+  <!-- P Stem and Loop -->
+  <path d="M38 92V30h26c15.4 0 24 8.6 24 20s-8.6 20-24 20H52v22H38zm14-34h12c8 0 12-4 12-8s-4-8-12-8H52v16z" fill="#ffffff"/>
+  <!-- Rising Arrow in Accent Blue -->
+  <path d="M54 78L88 44M88 44H70M88 44V62" stroke="url(#arrowGrad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

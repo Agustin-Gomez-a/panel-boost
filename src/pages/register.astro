@@ -1,0 +1,371 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const error = Astro.url.searchParams.get('error');
+---
+
+<BaseLayout
+  title="Crear Cuenta — Pulse Panel Boost"
+  description="Registrate gratis en Pulse Panel Boost y empezá a impulsar tus redes sociales hoy mismo."
+  noIndex={true}
+>
+  <div style="min-height:100vh;display:flex;flex-direction:column;">
+    <!-- Minimal navbar -->
+    <header class="navbar">
+      <div class="container">
+        <div class="navbar__inner">
+          <a href="/" class="navbar__logo" aria-label="Pulse Panel Boost - Inicio">
+            <div class="navbar__logo-icon">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="navbar__logo-text">Pulse<span>Boost</span></span>
+          </a>
+          <div class="navbar__actions" style="margin-left:auto;">
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema" id="theme-toggle-reg">
+              <i id="theme-icon" class="fa-solid fa-sun"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main style="flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;" aria-labelledby="register-page-title">
+      <div style="width:100%;max-width:480px;">
+        <!-- Header -->
+        <div style="text-align:center;margin-bottom:2rem;" class="animate-fade-up">
+          <div style="width:64px;height:64px;border-radius:var(--radius-lg);background:var(--gradient-accent);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:white;margin:0 auto 1.25rem;box-shadow:var(--accent-glow);" aria-hidden="true">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h1 id="register-page-title" style="font-size:1.75rem;margin-bottom:0.5rem;">Crear mi cuenta</h1>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Registrate gratis y empezá a crecer hoy</p>
+        </div>
+
+        <!-- Benefits mini -->
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem;" class="animate-fade-up animate-fade-up-delay-1">
+          <span style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--text-muted);">
+            <i class="fa-solid fa-check" style="color:var(--success);" aria-hidden="true"></i>
+            100% Gratis
+          </span>
+          <span style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--text-muted);">
+            <i class="fa-solid fa-check" style="color:var(--success);" aria-hidden="true"></i>
+            Sin tarjeta
+          </span>
+          <span style="display:flex;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--text-muted);">
+            <i class="fa-solid fa-check" style="color:var(--success);" aria-hidden="true"></i>
+            Activación inmediata
+          </span>
+        </div>
+
+        <!-- Card -->
+        <div class="card card--glow animate-fade-up animate-fade-up-delay-1">
+          {error && (
+            <div class="alert alert--error" style="margin-bottom:1.25rem;" role="alert">
+              <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+              {error === 'email_taken' ? 'Este email ya está registrado. ¿Querés iniciar sesión?' :
+               error === 'server' ? 'Error del servidor. Intentá de nuevo.' :
+               error === 'weak_password' ? 'La contraseña no cumple los requisitos de seguridad.' : error}
+            </div>
+          )}
+
+          <form id="register-form" method="POST" action="/api/auth/register" novalidate>
+            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div class="form-group">
+                <label class="form-label" for="reg-name">Tu nombre</label>
+                <div class="form-input-wrapper">
+                  <i class="fa-solid fa-user form-input-icon" aria-hidden="true"></i>
+                  <input
+                    class="form-input"
+                    type="text"
+                    id="reg-name"
+                    name="name"
+                    placeholder="Juan García"
+                    autocomplete="given-name"
+                    required
+                    aria-required="true"
+                    minlength="2"
+                    maxlength="100"
+                  />
+                </div>
+                <span class="form-error" id="name-error" role="alert" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  Ingresá tu nombre (mínimo 2 caracteres)
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-email">Email</label>
+                <div class="form-input-wrapper">
+                  <i class="fa-solid fa-envelope form-input-icon" aria-hidden="true"></i>
+                  <input
+                    class="form-input"
+                    type="email"
+                    id="reg-email"
+                    name="email"
+                    placeholder="vos@ejemplo.com"
+                    autocomplete="email"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <span class="form-error" id="email-error" role="alert" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  Ingresá un email válido
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-password">Contraseña</label>
+                <div class="form-input-wrapper">
+                  <i class="fa-solid fa-lock form-input-icon" aria-hidden="true"></i>
+                  <input
+                    class="form-input"
+                    type="password"
+                    id="reg-password"
+                    name="password"
+                    placeholder="Mínimo 8 caracteres"
+                    autocomplete="new-password"
+                    required
+                    aria-required="true"
+                    minlength="8"
+                    style="padding-right:3rem;"
+                  />
+                  <button
+                    type="button"
+                    id="toggle-password-reg"
+                    aria-label="Mostrar u ocultar contraseña"
+                    style="position:absolute;right:0.875rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.875rem;"
+                  >
+                    <i class="fa-solid fa-eye" id="eye-icon-reg" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <!-- Password strength indicator -->
+                <div id="password-strength" style="display:none;margin-top:0.5rem;">
+                  <div style="display:flex;gap:4px;margin-bottom:0.25rem;">
+                    <div id="ps-bar-1" style="height:3px;flex:1;border-radius:2px;background:var(--border);transition:background 0.3s;"></div>
+                    <div id="ps-bar-2" style="height:3px;flex:1;border-radius:2px;background:var(--border);transition:background 0.3s;"></div>
+                    <div id="ps-bar-3" style="height:3px;flex:1;border-radius:2px;background:var(--border);transition:background 0.3s;"></div>
+                    <div id="ps-bar-4" style="height:3px;flex:1;border-radius:2px;background:var(--border);transition:background 0.3s;"></div>
+                  </div>
+                  <span id="ps-label" style="font-size:0.75rem;color:var(--text-muted);">Ingresá tu contraseña</span>
+                </div>
+                <span class="form-error" id="password-error" role="alert" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  <span id="password-error-msg">Mínimo 8 caracteres, una mayúscula y un número</span>
+                </span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="reg-confirm-password">Confirmar Contraseña</label>
+                <div class="form-input-wrapper">
+                  <i class="fa-solid fa-lock-open form-input-icon" aria-hidden="true"></i>
+                  <input
+                    class="form-input"
+                    type="password"
+                    id="reg-confirm-password"
+                    name="confirmPassword"
+                    placeholder="Repetí tu contraseña"
+                    autocomplete="new-password"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                <span class="form-error" id="confirm-password-error" role="alert" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  Las contraseñas no coinciden
+                </span>
+              </div>
+
+              <div>
+                <div class="checkbox-wrapper">
+                  <input type="checkbox" id="reg-terms" name="terms" required aria-required="true" />
+                  <label for="reg-terms" style="font-size:0.8rem;color:var(--text-secondary);cursor:pointer;user-select:none;">
+                    Acepto los <a href="/terms" style="color:var(--accent-light);" target="_blank">Términos de Uso</a>
+                    y la <a href="/privacy" style="color:var(--accent-light);" target="_blank">Política de Privacidad</a>
+                  </label>
+                </div>
+                <span class="form-error" id="terms-error" role="alert" style="display:none;">
+                  <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+                  Debés aceptar los términos para continuar
+                </span>
+              </div>
+
+              <div id="reg-form-error" class="alert alert--error" style="display:none;" role="alert"></div>
+
+              <button
+                type="submit"
+                class="btn btn--primary"
+                id="register-submit-btn"
+                style="width:100%;justify-content:center;padding:0.875rem;"
+              >
+                <i class="fa-solid fa-user-plus"></i>
+                Crear mi cuenta gratis
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Login link -->
+        <p style="text-align:center;margin-top:1.5rem;font-size:0.875rem;color:var(--text-secondary);" class="animate-fade-up animate-fade-up-delay-2">
+          ¿Ya tenés cuenta?
+          <a href="/login" style="color:var(--accent-light);font-weight:600;text-decoration:none;">
+            Iniciá sesión →
+          </a>
+        </p>
+
+        <p style="text-align:center;margin-top:0.75rem;">
+          <a href="/" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;">
+            <i class="fa-solid fa-arrow-left" style="margin-right:0.25rem;" aria-hidden="true"></i>
+            Volver al inicio
+          </a>
+        </p>
+      </div>
+    </main>
+  </div>
+</BaseLayout>
+
+<script>
+  // Toggle password
+  const toggleBtn = document.getElementById('toggle-password-reg');
+  const passwordInput = document.getElementById('reg-password') as HTMLInputElement;
+  const eyeIcon = document.getElementById('eye-icon-reg');
+
+  toggleBtn?.addEventListener('click', () => {
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash';
+    } else {
+      passwordInput.type = 'password';
+      if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye';
+    }
+  });
+
+  // Password strength
+  const strengthEl = document.getElementById('password-strength');
+  const psLabel = document.getElementById('ps-label');
+  const bars = [
+    document.getElementById('ps-bar-1'),
+    document.getElementById('ps-bar-2'),
+    document.getElementById('ps-bar-3'),
+    document.getElementById('ps-bar-4'),
+  ];
+
+  passwordInput?.addEventListener('input', () => {
+    const val = passwordInput.value;
+    if (!strengthEl) return;
+
+    if (val.length === 0) {
+      strengthEl.style.display = 'none';
+      return;
+    }
+    strengthEl.style.display = 'block';
+
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+
+    const colors = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'];
+    const labels = ['Muy débil', 'Débil', 'Buena', 'Excelente'];
+
+    bars.forEach((bar, i) => {
+      if (bar) {
+        bar.style.background = i < score ? colors[score - 1] : 'var(--border)';
+      }
+    });
+
+    if (psLabel) {
+      psLabel.textContent = labels[score - 1] || 'Muy débil';
+      psLabel.style.color = colors[score - 1] || 'var(--danger)';
+    }
+  });
+
+  // Form validation & submit
+  const form = document.getElementById('register-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('register-submit-btn') as HTMLButtonElement;
+  const formError = document.getElementById('reg-form-error') as HTMLElement;
+
+  function showError(id: string, show: boolean) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  }
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const name = (document.getElementById('reg-name') as HTMLInputElement).value.trim();
+    const email = (document.getElementById('reg-email') as HTMLInputElement).value.trim();
+    const password = (document.getElementById('reg-password') as HTMLInputElement).value;
+    const confirmPassword = (document.getElementById('reg-confirm-password') as HTMLInputElement).value;
+    const terms = (document.getElementById('reg-terms') as HTMLInputElement).checked;
+
+    ['name-error', 'email-error', 'password-error', 'confirm-password-error', 'terms-error'].forEach(
+      (id) => showError(id, false)
+    );
+    formError.style.display = 'none';
+
+    let valid = true;
+
+    if (!name || name.length < 2) { showError('name-error', true); valid = false; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('email-error', true); valid = false; }
+
+    const hasLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    if (!hasLength || !hasUpper || !hasNumber) {
+      showError('password-error', true);
+      const msg = document.getElementById('password-error-msg');
+      if (msg) {
+        if (!hasLength) msg.textContent = 'Mínimo 8 caracteres';
+        else if (!hasUpper) msg.textContent = 'Necesita al menos una letra mayúscula';
+        else msg.textContent = 'Necesita al menos un número';
+      }
+      valid = false;
+    }
+
+    if (password !== confirmPassword) { showError('confirm-password-error', true); valid = false; }
+    if (!terms) { showError('terms-error', true); valid = false; }
+
+    if (!valid) return;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner"></span> Creando cuenta...';
+
+    try {
+      const formData = new FormData(form);
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.redirected) {
+        window.location.href = res.url;
+        return;
+      }
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> ¡Cuenta creada!';
+        window.location.href = data.redirect || '/dashboard';
+      } else {
+        formError.style.display = 'flex';
+        formError.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.error || 'No se pudo crear la cuenta'}`;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear mi cuenta gratis';
+      }
+    } catch {
+      formError.style.display = 'flex';
+      formError.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Intentá de nuevo.';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear mi cuenta gratis';
+    }
+  });
+
+  // Sync theme icon
+  const themeIcon = document.getElementById('theme-icon');
+  if (themeIcon) {
+    const theme = document.documentElement.getAttribute('data-theme');
+    themeIcon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+  }
+</script>
