@@ -38,17 +38,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Determine provider and original service ID
     const serviceIdStr = serviceId.toString();
-    let provider: 'smmsat' | 'mysmm' | 'peakerr' = 'smmsat';
+    let provider: 'smmsat' | 'jap' = 'smmsat';
     let originalServiceId = serviceId;
 
     if (serviceIdStr.startsWith('100')) {
       provider = 'smmsat';
       originalServiceId = parseInt(serviceIdStr.substring(3));
     } else if (serviceIdStr.startsWith('200')) {
-      provider = 'mysmm';
-      originalServiceId = parseInt(serviceIdStr.substring(3));
-    } else if (serviceIdStr.startsWith('300')) {
-      provider = 'peakerr';
+      provider = 'jap';
       originalServiceId = parseInt(serviceIdStr.substring(3));
     }
 
