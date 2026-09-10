@@ -16,6 +16,29 @@ if (!session) return Astro.redirect('/login');
     </p>
   </div>
 
+  <!-- Notice de Entrega y WhatsApp Express -->
+  <div style="background:linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(37, 211, 102, 0.08));border:1px solid rgba(14, 165, 233, 0.25);border-radius:var(--radius-md);padding:1rem 1.25rem;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <i class="fa-solid fa-bolt" style="color:var(--accent);font-size:1.25rem;"></i>
+      <div>
+        <div style="font-size:0.875rem;font-weight:700;color:var(--text-primary);">
+          Tiempo de inicio: 5 a 60 minutos
+        </div>
+        <div style="font-size:0.775rem;color:var(--text-secondary);margin-top:0.1rem;">
+          Los seguidores se entregan de forma progresiva y segura para proteger tu cuenta.
+        </div>
+      </div>
+    </div>
+    <a 
+      href="https://wa.me/5493815944751?text=Hola!%20Hice%20una%20transferencia%20y%20quiero%20acreditar%20mi%20saldo%20express." 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      style="display:flex;align-items:center;gap:0.4rem;background:rgba(37, 211, 102, 0.15);border:1px solid rgba(37, 211, 102, 0.4);color:#25D366;padding:0.45rem 0.9rem;border-radius:var(--radius-sm);font-size:0.8rem;font-weight:700;text-decoration:none;"
+    >
+      <i class="fa-brands fa-whatsapp" style="font-size:1rem;"></i> Acreditación Express: +549 3815944751
+    </a>
+  </div>
+
   <div id="quick-categories" style="display:flex;gap:0.75rem;overflow-x:auto;padding-bottom:1rem;margin-bottom:0.5rem;scrollbar-width:none;flex-wrap:wrap;">
     <!-- Filled via JS -->
   </div>
