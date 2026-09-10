@@ -35,7 +35,7 @@ doc.moveDown(0.4);
 doc.fontSize(10).fillColor('#334155').text(
   'Tu panel es una plataforma de reventa de servicios para redes sociales (seguidores, likes, visualizaciones). ' +
   'Opera conectado mediante API con un proveedor mayorista (SMMSAT). ' +
-  'Ustedes fijan sus propios precios con margen de ganancia (por defecto configurado al 220% de recargo), ' +
+  'Ustedes fijan sus propios precios con margen de ganancia (configurado al 284%, de modo que servicios de $2.47 USD se comercializan a ~$7.00 USD), ' +
   'cobran a sus clientes en su propia cuenta bancaria o MercadoPago, y el proveedor se encarga de la entrega técnica.'
 );
 doc.moveDown(1);

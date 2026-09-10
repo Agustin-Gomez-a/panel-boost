@@ -80,7 +80,7 @@ let lastCacheTime = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function getServices(): Promise<SMMService[]> {
-  const MARKUP_MULTIPLIER = 2.2; // 220% markup
+  const MARKUP_MULTIPLIER = parseFloat(process.env.MARKUP_MULTIPLIER || import.meta.env.MARKUP_MULTIPLIER || '2.84'); // Margen para que el servicio base de ~$2.47 quede en ~$7.00 USD
 
   if (servicesCache && servicesCache.length > 0 && Date.now() - lastCacheTime < CACHE_TTL) {
     return servicesCache;
