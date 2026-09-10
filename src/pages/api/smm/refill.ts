@@ -22,10 +22,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return Response.json({ error: 'Pedido no encontrado en la base de datos' }, { status: 404 });
     }
 
-    const provider = order.provider || 'smmsat';
     const providerOrderId = parseInt(order.provider_order_id || order.smm_order_id);
 
-    const result = await createRefill(provider, providerOrderId);
+    const result = await createRefill(providerOrderId);
     return Response.json({ success: true, refill_id: result.refill });
   } catch (error) {
     console.error('Refill error:', error);

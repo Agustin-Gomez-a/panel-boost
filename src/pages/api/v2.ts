@@ -96,7 +96,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       const smmRes = await addOrder(
-        service.provider as 'smmsat' | 'jap',
         service.original_service,
         link,
         quantity

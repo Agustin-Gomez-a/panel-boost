@@ -36,26 +36,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return Response.json({ error: 'Saldo insuficiente. Por favor, agregá fondos.' }, { status: 400 });
     }
 
-    // Determine provider and original service ID
+    // Determine original service ID (supporting backward compatibility with 100xxx prefix)
     const serviceIdStr = serviceId.toString();
-    let provider: 'smmsat' | 'jap' = 'smmsat';
-    let originalServiceId = serviceId;
+    const originalServiceId = serviceIdStr.startsWith('100')
+      ? parseInt(serviceIdStr.substring(3))
+      : serviceId;
 
-    if (serviceIdStr.startsWith('100')) {
-      provider = 'smmsat';
-      originalServiceId = parseInt(serviceIdStr.substring(3));
-    } else if (serviceIdStr.startsWith('200')) {
-      provider = 'jap';
-      originalServiceId = parseInt(serviceIdStr.substring(3));
-    }
-
-    // Place order on the Provider API
-    const smmResult = await addOrder(provider, originalServiceId, link, quantity);
+    // Place order on SMM SAT API
+    const smmResult = await addOrder(originalServiceId, link, quantity);
     
     // Check if the API returned an error or didn't return an order ID
     if (!smmResult || !smmResult.order) {
       const errorMsg = (smmResult as any)?.error || 'Error desconocido del proveedor SMM';
-      console.error(`Error placing order on ${provider}:`, errorMsg);
+      console.error('Error placing order on smmsat:', errorMsg);
       return Response.json({ error: `Error del proveedor: ${errorMsg}` }, { status: 500 });
     }
     
@@ -80,7 +73,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         ${quantity},
         ${charge.toFixed(6)},
         'Pending',
-        ${provider},
+        'smmsat',
         ${smmResult.order.toString()}
       )
     `;
