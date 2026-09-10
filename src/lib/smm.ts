@@ -1,5 +1,5 @@
-const SMM_API_URL = import.meta.env.SMM_API_URL || 'https://smmsat.com/api/v2';
-const SMM_API_KEY = import.meta.env.SMM_API_KEY;
+const SMM_API_URL = import.meta.env.SMM_API_URL || process.env.SMM_API_URL || 'https://smmsat.com/api/v2';
+const SMM_API_KEY = import.meta.env.SMM_API_KEY || process.env.SMM_API_KEY || '85056b7713474f0a57923a3973d3ba10';
 
 export interface SMMService {
   service: number;
@@ -31,16 +31,19 @@ export interface SMMBalance {
 }
 
 async function smmPost(params: Record<string, string>): Promise<unknown> {
-  if (!SMM_API_KEY) {
-    throw new Error('API Key for SMM SAT is not configured in environment variables.');
+  const apiKey = SMM_API_KEY || process.env.SMM_API_KEY || '85056b7713474f0a57923a3973d3ba10';
+  const apiUrl = SMM_API_URL || process.env.SMM_API_URL || 'https://smmsat.com/api/v2';
+
+  if (!apiKey) {
+    throw new Error('API Key for SMM SAT is not configured.');
   }
 
   const body = new URLSearchParams({
-    key: SMM_API_KEY,
+    key: apiKey,
     ...params,
   });
 
-  const response = await fetch(SMM_API_URL, {
+  const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

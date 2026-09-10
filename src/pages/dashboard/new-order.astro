@@ -246,6 +246,7 @@ if (!session) return Astro.redirect('/login');
       };
 
       function getCatPriority(cat: string) {
+        if (!cat || typeof cat !== 'string') return 99;
         const lower = cat.toLowerCase();
         for (const [key, val] of Object.entries(priority)) {
           if (lower.includes(key)) return val;
@@ -254,6 +255,7 @@ if (!session) return Astro.redirect('/login');
       }
 
       function getCategoryIcon(name: string) {
+        if (!name || typeof name !== 'string') return '<i class="fa-solid fa-layer-group" style="color:#a8b2d1"></i>';
         const lower = name.toLowerCase();
         if (lower.includes('instagram') || lower.includes('ig ')) return '<i class="fa-brands fa-instagram" style="color:#E1306C"></i>';
         if (lower.includes('tiktok') || lower.includes('tik tok')) return '<i class="fa-brands fa-tiktok" style="color:#00f2fe"></i>';
@@ -276,12 +278,22 @@ if (!session) return Astro.redirect('/login');
         return '<i class="fa-solid fa-layer-group" style="color:#a8b2d1"></i>';
       }
 
+      if (services.length === 0) {
+        categoryFilter.innerHTML = '<option value="">No hay servicios disponibles en este momento</option>';
+        serviceSelect.innerHTML = '<option value="">No hay servicios disponibles</option>';
+        return;
+      }
+
       // Get unique categories and sort
-      const categories = [...new Set(services.map((s) => s.category))].sort((a, b) => {
+      const rawCategories = services
+        .map((s) => s && s.category)
+        .filter((c): c is string => typeof c === 'string' && c.trim().length > 0);
+
+      const categories = [...new Set(rawCategories)].sort((a, b) => {
         const pA = getCatPriority(a);
         const pB = getCatPriority(b);
         if (pA !== pB) return pA - pB;
-        return a.localeCompare(b);
+        return (a || '').localeCompare(b || '');
       });
 
       categoryFilter.innerHTML = `<option value="">— Todas las categorías —</option>`;

@@ -9,79 +9,120 @@ if (!session) return Astro.redirect('/login');
 let successMsg = '';
 let errorMsg = '';
 
-// Ensure tickets table exists
-try {
-  await sql`
-    CREATE TABLE IF NOT EXISTS tickets (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES users(id),
-      subject VARCHAR(255) NOT NULL,
-      category VARCHAR(50) NOT NULL,
-      status VARCHAR(50) DEFAULT 'open',
-      priority VARCHAR(50) DEFAULT 'normal',
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
+const selectedTicketId = Astro.url.searchParams.get('id');
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS ticket_messages (
-      id SERIAL PRIMARY KEY,
-      ticket_id INTEGER REFERENCES tickets(id) ON DELETE CASCADE,
-      user_id INTEGER REFERENCES users(id),
-      message TEXT NOT NULL,
-      is_staff BOOLEAN DEFAULT FALSE,
-      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
-
-  if (Astro.request.method === 'POST') {
+// Handle POST: Create new ticket OR reply to an existing ticket
+if (Astro.request.method === 'POST') {
+  try {
     const formData = await Astro.request.formData();
-    const subject = formData.get('subject')?.toString().trim();
-    const category = formData.get('category')?.toString();
-    const message = formData.get('message')?.toString().trim();
+    const action = formData.get('action')?.toString() || 'create';
 
-    if (subject && category && message) {
-      const [ticket] = await sql`
-        INSERT INTO tickets (user_id, subject, category)
-        VALUES (${session.userId}, ${subject}, ${category})
-        RETURNING id
-      `;
+    if (action === 'create') {
+      const subject = formData.get('subject')?.toString().trim();
+      const category = formData.get('category')?.toString() || 'general';
+      const orderId = formData.get('order_id')?.toString().trim() || null;
+      const message = formData.get('message')?.toString().trim();
 
-      await sql`
-        INSERT INTO ticket_messages (ticket_id, user_id, message, is_staff)
-        VALUES (${ticket.id}, ${session.userId}, ${message}, FALSE)
-      `;
+      if (subject && message) {
+        const [ticket] = await sql`
+          INSERT INTO tickets (user_id, subject, category, order_id, status)
+          VALUES (${session.userId}, ${subject}, ${category}, ${orderId}, 'Pendiente de análisis')
+          RETURNING id
+        `;
 
-      successMsg = `Ticket #${ticket.id} creado con éxito. Te responderemos a la brevedad.`;
-    } else {
-      errorMsg = 'Completá todos los campos requeridos.';
+        await sql`
+          INSERT INTO ticket_messages (ticket_id, user_id, message, is_admin)
+          VALUES (${ticket.id}, ${session.userId}, ${message}, FALSE)
+        `;
+
+        return Astro.redirect(`/dashboard/tickets?id=${ticket.id}&created=1`);
+      } else {
+        errorMsg = 'Completá el asunto y el mensaje del ticket.';
+      }
+    } else if (action === 'reply') {
+      const ticketId = formData.get('ticket_id')?.toString();
+      const message = formData.get('message')?.toString().trim();
+
+      if (ticketId && message) {
+        // Verify ticket belongs to user (or is admin)
+        const [t] = await sql`SELECT id FROM tickets WHERE id = ${ticketId} AND user_id = ${session.userId} LIMIT 1`;
+        if (t) {
+          await sql`
+            INSERT INTO ticket_messages (ticket_id, user_id, message, is_admin)
+            VALUES (${ticketId}, ${session.userId}, ${message}, FALSE)
+          `;
+          await sql`
+            UPDATE tickets 
+            SET status = 'Pendiente de análisis', updated_at = NOW()
+            WHERE id = ${ticketId}
+          `;
+          return Astro.redirect(`/dashboard/tickets?id=${ticketId}`);
+        } else {
+          errorMsg = 'Ticket no encontrado.';
+        }
+      }
     }
+  } catch (e: any) {
+    console.error('Tickets error:', e);
+    errorMsg = e.message || 'Error al procesar la solicitud.';
   }
-} catch (e) {
-  console.error('Tickets error:', e);
 }
 
+if (Astro.url.searchParams.get('created') === '1') {
+  successMsg = '¡Ticket creado exitosamente! Nuestro equipo ya lo tiene en estado "Pendiente de análisis".';
+}
+
+// Fetch user tickets
 let userTickets: any[] = [];
 try {
   userTickets = await sql`
-    SELECT t.id, t.subject, t.category, t.status, t.created_at,
+    SELECT t.id, t.subject, t.category, t.order_id, t.status, t.created_at, t.updated_at,
            COUNT(m.id) as message_count
     FROM tickets t
     LEFT JOIN ticket_messages m ON m.ticket_id = t.id
     WHERE t.user_id = ${session.userId}
     GROUP BY t.id
-    ORDER BY t.created_at DESC
+    ORDER BY t.updated_at DESC, t.created_at DESC
   `;
-} catch (e) {}
+} catch (e) {
+  console.error('Error fetching tickets:', e);
+}
+
+// Fetch selected ticket and messages if any
+let activeTicket: any = null;
+let activeMessages: any[] = [];
+
+if (selectedTicketId) {
+  try {
+    const [found] = await sql`
+      SELECT id, subject, category, order_id, status, created_at
+      FROM tickets 
+      WHERE id = ${selectedTicketId} AND user_id = ${session.userId}
+      LIMIT 1
+    `;
+    if (found) {
+      activeTicket = found;
+      activeMessages = await sql`
+        SELECT m.id, m.message, m.is_admin, m.created_at, u.name as sender_name
+        FROM ticket_messages m
+        LEFT JOIN users u ON u.id = m.user_id
+        WHERE m.ticket_id = ${selectedTicketId}
+        ORDER BY m.created_at ASC
+      `;
+    }
+  } catch (e) {
+    console.error('Error fetching ticket detail:', e);
+  }
+}
 ---
 
-<DashboardLayout title="Soporte y Tickets" activeNav="tickets">
-  <div class="dashboard-header">
+<DashboardLayout title="Tickets y Soporte" activeNav="tickets">
+  <div class="dashboard-header" style="margin-bottom: 1.5rem;">
     <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
       <span class="gradient-text">Tickets</span> de Soporte
     </h1>
     <p style="color:var(--text-secondary);font-size:0.875rem;">
-      ¿Tenés alguna consulta o problema con un pedido? Nuestro equipo te responde 24/7.
+      Atención al cliente personalizada. Creá tu consulta o seguí el estado de tus tickets.
     </p>
   </div>
 
@@ -97,97 +138,198 @@ try {
     </div>
   )}
 
-  <div style="display:grid;grid-template-columns:1fr 380px;gap:1.5rem;align-items:start;" id="tickets-layout">
-    <!-- List of tickets -->
-    <div class="card" style="padding:0;">
+  <div style="display:grid;grid-template-columns:1fr 440px;gap:1.5rem;align-items:start;" id="tickets-container">
+    <!-- Lista de Tickets -->
+    <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-        <h3 style="font-size:1.05rem;margin:0;color:var(--text-primary);">Tus Tickets</h3>
-        <span class="badge badge--cyan" style="font-size:0.75rem;">{userTickets.length} tickets</span>
+        <h3 style="font-size:1.1rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+          <i class="fa-solid fa-inbox" style="color:var(--accent);"></i>
+          Tus Tickets
+        </h3>
+        {activeTicket ? (
+          <a href="/dashboard/tickets" class="btn btn--outline" style="font-size:0.75rem;padding:4px 10px;text-decoration:none;">
+            <i class="fa-solid fa-plus"></i> Nuevo Ticket
+          </a>
+        ) : (
+          <span class="badge badge--cyan">{userTickets.length} tickets</span>
+        )}
       </div>
 
       <div class="table-wrapper" style="overflow-x:auto;">
-        <table class="data-table" style="width:100%;table-layout:fixed;">
+        <table class="data-table" style="width:100%;border-collapse:collapse;">
           <thead>
-            <tr>
-              <th style="width:70px;">ID</th>
-              <th>Asunto</th>
-              <th style="width:110px;">Departamento</th>
-              <th style="width:100px;">Estado</th>
-              <th style="width:120px;">Fecha</th>
+            <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+              <th style="padding:0.85rem 1rem;">Asunto</th>
+              <th style="padding:0.85rem 1rem;">Categoría</th>
+              <th style="padding:0.85rem 1rem;">Estado</th>
+              <th style="padding:0.85rem 1rem;">Fecha</th>
+              <th style="padding:0.85rem 1rem;text-align:right;">Acción</th>
             </tr>
           </thead>
           <tbody>
-            {userTickets.map((t) => (
-              <tr>
-                <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">#{t.id}</td>
-                <td>
-                  <div style="font-weight:600;color:var(--text-primary);font-size:0.875rem;">{t.subject}</div>
-                  <div style="font-size:0.75rem;color:var(--text-muted);">{t.message_count} mensaje(s)</div>
-                </td>
-                <td>
-                  <span class="badge badge--accent" style="font-size:0.65rem;text-transform:capitalize;">{t.category}</span>
-                </td>
-                <td>
-                  <span class={`badge ${t.status === 'open' ? 'badge--success' : 'badge--cyan'}`} style="font-size:0.65rem;text-transform:uppercase;">
-                    {t.status === 'open' ? 'Abierto' : t.status}
-                  </span>
-                </td>
-                <td style="font-size:0.8rem;color:var(--text-secondary);">
-                  {new Date(t.created_at).toLocaleDateString('es-AR')}
-                </td>
-              </tr>
-            ))}
+            {userTickets.map((t) => {
+              const isCurrent = activeTicket && activeTicket.id === t.id;
+              let badgeColor = 'badge--warning';
+              if (t.status === 'Respondido') badgeColor = 'badge--success';
+              if (t.status === 'En proceso') badgeColor = 'badge--cyan';
+              if (t.status === 'Cerrado') badgeColor = 'badge--outline';
+
+              return (
+                <tr style={`border-bottom:1px solid var(--border);cursor:pointer;background:${isCurrent ? 'rgba(44, 177, 154, 0.08)' : 'transparent'};`} onclick={`window.location.href='/dashboard/tickets?id=${t.id}'`}>
+                  <td style="padding:0.85rem 1rem;">
+                    <div style="font-weight:600;color:var(--text-primary);font-size:0.875rem;">
+                      {t.subject}
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);display:flex;gap:0.5rem;align-items:center;">
+                      <span><i class="fa-regular fa-comment"></i> {t.message_count} mensajes</span>
+                      {t.order_id && <span>• Pedido #{t.order_id}</span>}
+                    </div>
+                  </td>
+                  <td style="padding:0.85rem 1rem;">
+                    <span class="badge" style="background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);font-size:0.7rem;text-transform:capitalize;">
+                      {t.category}
+                    </span>
+                  </td>
+                  <td style="padding:0.85rem 1rem;">
+                    <span class={`badge ${badgeColor}`} style="font-size:0.72rem;padding:3px 8px;">
+                      {t.status}
+                    </span>
+                  </td>
+                  <td style="padding:0.85rem 1rem;font-size:0.8rem;color:var(--text-secondary);">
+                    {new Date(t.created_at).toLocaleDateString('es-AR')}
+                  </td>
+                  <td style="padding:0.85rem 1rem;text-align:right;">
+                    <a href={`/dashboard/tickets?id=${t.id}`} class="btn btn--outline" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;">
+                      Ver <i class="fa-solid fa-chevron-right" style="font-size:0.65rem;"></i>
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+
         {userTickets.length === 0 && (
-          <div style="text-align:center;padding:3rem;color:var(--text-muted);font-size:0.9rem;">
-            <i class="fa-solid fa-ticket" style="font-size:2rem;margin-bottom:0.75rem;opacity:0.4;display:block;"></i>
-            No tenés tickets creados todavía.
+          <div style="text-align:center;padding:3rem 1.5rem;color:var(--text-muted);font-size:0.9rem;">
+            <i class="fa-solid fa-headset" style="font-size:2.5rem;margin-bottom:0.75rem;opacity:0.3;display:block;"></i>
+            No tenés tickets abiertos. Si tenés alguna consulta, creá uno a la derecha.
           </div>
         )}
       </div>
     </div>
 
-    <!-- Create Ticket Form -->
-    <div class="card" style="padding:1.5rem;">
-      <h3 style="font-size:1.1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem;">
-        <i class="fa-solid fa-plus-circle" style="color:var(--accent);"></i>
-        Crear Nuevo Ticket
-      </h3>
+    <!-- Panel Lateral: Formulario de Creación O Hilo de Chat -->
+    <div>
+      {activeTicket ? (
+        <div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:750px;">
+          <div style="padding:1.25rem;border-bottom:1px solid var(--border);background:var(--bg-secondary);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
+              <h3 style="font-size:1.05rem;color:var(--text-primary);margin:0;font-weight:700;">
+                {activeTicket.subject}
+              </h3>
+              <span class={`badge ${activeTicket.status === 'Respondido' ? 'badge--success' : activeTicket.status === 'En proceso' ? 'badge--cyan' : 'badge--warning'}`} style="font-size:0.7rem;flex-shrink:0;">
+                {activeTicket.status}
+              </span>
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);display:flex;gap:0.75rem;flex-wrap:wrap;">
+              <span><strong>Categoría:</strong> {activeTicket.category}</span>
+              {activeTicket.order_id && <span><strong>Pedido:</strong> #{activeTicket.order_id}</span>}
+              <span><strong>Creado:</strong> {new Date(activeTicket.created_at).toLocaleDateString('es-AR')}</span>
+            </div>
+          </div>
 
-      <form method="POST" style="display:flex;flex-direction:column;gap:1rem;">
-        <div class="form-group">
-          <label class="form-label">Departamento</label>
-          <select name="category" class="form-input" required>
-            <option value="pedidos">Problemas con un Pedido</option>
-            <option value="pagos">Pagos / Saldo</option>
-            <option value="api">Soporte de API</option>
-            <option value="otro">Otro tipo de consulta</option>
-          </select>
+          <div style="padding:1.25rem;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:1rem;background:var(--bg-primary);">
+            {activeMessages.map((m) => {
+              const isAdmin = m.is_admin;
+              return (
+                <div style={`display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-start' : 'flex-end'};`}>
+                  <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;color:var(--text-muted);">
+                    {isAdmin ? (
+                      <span style="color:#f59e0b;font-weight:700;display:flex;align-items:center;gap:0.3rem;">
+                        <i class="fa-solid fa-shield-halved"></i> Soporte Oficial
+                      </span>
+                    ) : (
+                      <span style="font-weight:600;color:var(--text-secondary);">Tú</span>
+                    )}
+                    <span>• {new Date(m.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div style={`max-width:85%;padding:0.75rem 1rem;border-radius:12px;font-size:0.875rem;line-height:1.45;word-break:break-word;${isAdmin ? 'background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--text-primary);border-bottom-left-radius:2px;' : 'background:var(--accent);color:white;border-bottom-right-radius:2px;'}`}>
+                    {m.message}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <form method="POST" style="padding:1rem;border-top:1px solid var(--border);background:var(--bg-secondary);">
+            <input type="hidden" name="action" value="reply" />
+            <input type="hidden" name="ticket_id" value={activeTicket.id} />
+            <div style="display:flex;gap:0.5rem;">
+              <textarea 
+                name="message" 
+                rows="2" 
+                class="form-input" 
+                placeholder="Escribí tu respuesta..." 
+                required 
+                style="resize:none;font-size:0.85rem;padding:0.6rem 0.75rem;"
+              ></textarea>
+              <button type="submit" class="btn btn--primary" style="padding:0.6rem 1rem;font-weight:600;font-size:0.85rem;align-self:flex-end;">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+          </form>
         </div>
+      ) : (
+        <div class="card" style="padding:1.5rem;">
+          <h3 style="font-size:1.15rem;color:var(--text-primary);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem;">
+            <i class="fa-solid fa-circle-plus" style="color:var(--accent);"></i>
+            Crear Nuevo Ticket
+          </h3>
+          <p style="font-size:0.825rem;color:var(--text-secondary);margin-bottom:1.25rem;">
+            Tu consulta quedará en estado <strong>Pendiente de análisis</strong> y el equipo te responderá aquí.
+          </p>
 
-        <div class="form-group">
-          <label class="form-label">Asunto / ID de Pedido</label>
-          <input type="text" name="subject" class="form-input" placeholder="Ej: Pedido #1234 demora" required />
+          <form method="POST" style="display:flex;flex-direction:column;gap:1.2rem;">
+            <input type="hidden" name="action" value="create" />
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;">Asunto *</label>
+              <input type="text" name="subject" class="form-input" placeholder="Ej: Consulta sobre pedido de Instagram" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;">Departamento / Categoría *</label>
+              <select name="category" class="form-input" required style="cursor:pointer;">
+                <option value="pedidos">Problema con un Pedido</option>
+                <option value="pagos">Pagos / Carga de Saldo</option>
+                <option value="servicios">Consulta sobre Servicios</option>
+                <option value="otro">Otro Motivo</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;">ID de Pedido (Opcional)</label>
+              <input type="text" name="order_id" class="form-input" placeholder="Ej: 10425" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight:600;">Mensaje detallado *</label>
+              <textarea name="message" rows="4" class="form-input" placeholder="Describí tu consulta con el mayor detalle posible..." required style="resize:vertical;"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn--primary" style="width:100%;padding:0.75rem;font-weight:700;margin-top:0.25rem;">
+              <i class="fa-solid fa-paper-plane" style="margin-right:0.5rem;"></i> Abrir Ticket
+            </button>
+          </form>
         </div>
-
-        <div class="form-group">
-          <label class="form-label">Mensaje</label>
-          <textarea name="message" class="form-input" rows="4" placeholder="Describí tu consulta detalladamente..." style="resize:vertical;min-height:100px;" required></textarea>
-        </div>
-
-        <button type="submit" class="btn btn--primary" style="width:100%;justify-content:center;margin-top:0.5rem;">
-          <i class="fa-solid fa-paper-plane" style="margin-right:0.5rem;"></i>
-          Enviar Ticket
-        </button>
-      </form>
+      )}
     </div>
   </div>
 </DashboardLayout>
 
 <style>
   @media (max-width: 900px) {
-    #tickets-layout {
+    #tickets-container {
       grid-template-columns: 1fr !important;
     }
   }

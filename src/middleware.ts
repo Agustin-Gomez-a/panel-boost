@@ -23,6 +23,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     // Attach user to locals
     context.locals.user = session;
+
+    // Protect superadmin routes
+    if (url.pathname.startsWith('/dashboard/admin')) {
+      if (session.role !== 'admin') {
+        return redirect('/dashboard');
+      }
+    }
   }
 
   // Redirect logged-in users away from auth pages

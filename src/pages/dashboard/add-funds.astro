@@ -15,31 +15,82 @@ if (Astro.request.method === 'POST') {
     const amount = parseFloat(formData.get('amount')?.toString() || '0');
     const method = formData.get('method')?.toString() || '';
     const transactionId = formData.get('transactionId')?.toString() || '';
+    const receiptFile = formData.get('receipt') as File | null;
+    let receiptData = '';
+
+    if (receiptFile && receiptFile.size > 0) {
+      if (receiptFile.size > 3 * 1024 * 1024) {
+        throw new Error('El comprobante no debe superar los 3MB.');
+      }
+      const buffer = Buffer.from(await receiptFile.arrayBuffer());
+      const mime = receiptFile.type || 'image/jpeg';
+      receiptData = `data:${mime};base64,${buffer.toString('base64')}`;
+    }
 
     if (amount > 0 && method && transactionId) {
       await sql`
-        INSERT INTO payments (user_id, amount, method, transaction_id, status)
-        VALUES (${session.userId}, ${amount}, ${method}, ${transactionId}, 'pending')
+        INSERT INTO payments (user_id, amount, method, transaction_id, receipt_data, status)
+        VALUES (${session.userId}, ${amount}, ${method}, ${transactionId}, ${receiptData || null}, 'pending')
       `;
-      successMsg = 'Solicitud de fondos enviada. El saldo se acreditará una vez que el administrador verifique el pago.';
+      successMsg = '¡Comprobante enviado con éxito! Tu pago está pendiente de análisis y el saldo se activará en cuanto el administrador lo apruebe.';
     } else {
-      errorMsg = 'Por favor, completá todos los campos correctamente.';
+      errorMsg = 'Por favor, completá el método, monto e ID/comprobante de la transacción.';
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Add funds error:', error);
-    errorMsg = 'Hubo un error al procesar la solicitud. Intentá de nuevo.';
+    errorMsg = error.message || 'Hubo un error al procesar la solicitud. Intentá de nuevo.';
   }
+}
+
+// Get user payment history
+let userPayments: any[] = [];
+try {
+  userPayments = await sql`
+    SELECT id, amount, method, transaction_id, receipt_data, status, created_at, approved_at
+    FROM payments
+    WHERE user_id = ${session.userId}
+    ORDER BY created_at DESC
+    LIMIT 20
+  `;
+} catch (e) {
+  console.error('Error fetching payments:', e);
 }
 ---
 
-<DashboardLayout title="Agregar Fondos" activeNav="add-funds">
-  <div class="dashboard-header">
+<DashboardLayout title="Cargar Saldo" activeNav="add-funds">
+  <div class="dashboard-header" style="margin-bottom: 1.5rem;">
     <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">
-      <span class="gradient-text">Agregar</span> Fondos
+      <span class="gradient-text">Cargar</span> Saldo
     </h1>
     <p style="color:var(--text-secondary);font-size:0.875rem;">
-      Depositá saldo en tu cuenta mediante Transferencia o Criptomonedas.
+      Depositá saldo mediante Transferencia Bancaria o Criptomonedas para efectuar pedidos de seguidores.
     </p>
+  </div>
+
+  <!-- Banner de WhatsApp Contacto Directo -->
+  <div style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.15), rgba(18, 140, 126, 0.1)); border: 1px solid rgba(37, 211, 102, 0.4); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <div style="width: 46px; height: 46px; border-radius: 50%; background: #25D366; color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);">
+        <i class="fa-brands fa-whatsapp"></i>
+      </div>
+      <div>
+        <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary); font-weight: 700;">
+          ¿Tenés dudas o querés enviar el comprobante directo?
+        </h3>
+        <p style="margin: 0.2rem 0 0 0; font-size: 0.825rem; color: var(--text-secondary);">
+          Atención y acreditación por WhatsApp: <strong style="color: #25D366;">+549 3815944751</strong>
+        </p>
+      </div>
+    </div>
+    <a 
+      href="https://wa.me/5493815944751?text=Hola!%20Acabo%20de%20hacer%20una%20transferencia%20en%20Pulse%20Panel%20Boost%20y%20te%20env%C3%ADo%20el%20comprobante." 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      class="btn" 
+      style="background: #25D366; color: white; font-weight: 700; border: none; border-radius: var(--radius-sm); padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;"
+    >
+      <i class="fa-brands fa-whatsapp" style="font-size: 1.1rem;"></i> Contactar WhatsApp
+    </a>
   </div>
 
   {successMsg && (
@@ -54,8 +105,8 @@ if (Astro.request.method === 'POST') {
     </div>
   )}
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;" id="funds-layout">
-    <!-- Payment Info -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;" id="funds-layout">
+    <!-- Datos de Pago -->
     <div style="display:flex;flex-direction:column;gap:1.5rem;">
       <!-- Transferencia Bancaria -->
       <div class="card" style="padding:1.5rem;">
@@ -65,25 +116,32 @@ if (Astro.request.method === 'POST') {
           </div>
           <div>
             <h3 style="font-size:1rem;color:var(--text-primary);margin:0;">Transferencia Bancaria</h3>
-            <div style="font-size:0.75rem;color:var(--text-muted);">ARS - MercadoPago / Bancos</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">ARS - MercadoPago / Cualquier Banco</div>
           </div>
         </div>
+
         <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;">
           <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">
             <span style="color:var(--text-secondary);">CBU/CVU:</span>
-            <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;">0000003100000000000000</span>
+            <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:600;user-select:all;">0000003100000000000000</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;font-size:0.85rem;">
+            <span style="color:var(--text-secondary);">Alias:</span>
+            <span style="font-family:var(--font-mono);color:var(--accent);font-weight:700;user-select:all;">pulse.panel.mp</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
-            <span style="color:var(--text-secondary);">Alias:</span>
-            <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;">pulse.panel.mp</span>
+            <span style="color:var(--text-secondary);">WhatsApp de aviso:</span>
+            <span style="font-family:var(--font-mono);color:#25D366;font-weight:600;">+549 3815944751</span>
           </div>
         </div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">
-          * Valor del dólar tomado a cotización Crypto.
-        </p>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(44, 177, 154, 0.08);padding:0.75rem;border-radius:var(--radius-sm);border:1px solid rgba(44, 177, 154, 0.2);">
+          <span style="font-size:0.8rem;color:var(--text-secondary);">Cotización estimada:</span>
+          <span id="rate-transfer" style="font-size:0.85rem;font-weight:700;color:var(--accent);">1 USD = $1.350 ARS</span>
+        </div>
       </div>
 
-      <!-- Criptomonedas -->
+      <!-- Criptomonedas USDT -->
       <div class="card" style="padding:1.5rem;">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
           <div style="width:40px;height:40px;border-radius:10px;background:rgba(245, 158, 11, 0.15);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
@@ -91,61 +149,146 @@ if (Astro.request.method === 'POST') {
           </div>
           <div>
             <h3 style="font-size:1rem;color:var(--text-primary);margin:0;">Criptomonedas</h3>
-            <div style="font-size:0.75rem;color:var(--text-muted);">USDT (TRC20 / BSC)</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">USDT (Red TRC20 o BEP20)</div>
           </div>
         </div>
-        <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:1rem;overflow:hidden;word-break:break-all;">
-          <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.25rem;">Billetera (USDT TRC20):</div>
-          <div style="font-family:var(--font-mono);color:var(--text-primary);font-weight:500;font-size:0.8rem;">
+        <div style="background:var(--bg-tertiary);padding:1rem;border-radius:var(--radius-sm);margin-bottom:0.5rem;overflow:hidden;word-break:break-all;">
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.25rem;">Billetera USDT (TRC20):</div>
+          <div style="font-family:var(--font-mono);color:var(--text-primary);font-weight:600;font-size:0.8rem;user-select:all;">
             TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Notify Form -->
+    <!-- Formulario de Notificación con Comprobante -->
     <div class="card" style="padding:1.5rem;height:fit-content;">
-      <h3 style="font-size:1.1rem;color:var(--text-primary);margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+      <h3 style="font-size:1.15rem;color:var(--text-primary);margin-bottom:0.25rem;display:flex;align-items:center;gap:0.5rem;">
         <i class="fa-solid fa-file-invoice-dollar" style="color:var(--accent);"></i>
-        Notificar Pago
+        Notificar Pago y Cargar Comprobante
       </h3>
-      <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1.5rem;">
-        Una vez que hayas realizado el pago, completá este formulario para que podamos acreditar el saldo en tu cuenta.
+      <p style="font-size:0.825rem;color:var(--text-secondary);margin-bottom:1.25rem;">
+        Completá los datos de tu transferencia para que el superadministrador active tu saldo.
       </p>
 
-      <form method="POST" style="display:flex;flex-direction:column;gap:1.25rem;">
+      <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:1.2rem;">
         <div class="form-group">
-          <label class="form-label">Método utilizado</label>
-          <select name="method" class="form-input" required>
-            <option value="">— Seleccioná el método —</option>
-            <option value="transfer">Transferencia Bancaria (ARS)</option>
+          <label class="form-label" style="font-weight:600;">Método utilizado *</label>
+          <select name="method" class="form-input" required style="cursor:pointer;">
+            <option value="transfer">Transferencia Bancaria / MercadoPago (ARS)</option>
             <option value="crypto">Criptomonedas (USDT)</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Monto enviado (en USD)</label>
+          <label class="form-label" style="font-weight:600;">Monto que transferiste (en USD) *</label>
           <div class="input-with-icon">
             <i class="fa-solid fa-dollar-sign"></i>
             <input type="number" id="funds-amount" name="amount" class="form-input" placeholder="Ej: 10.00" step="0.01" min="1" required />
           </div>
-          <div id="ars-calc-preview" style="margin-top:0.5rem;font-size:0.85rem;color:var(--text-secondary);font-weight:600;">
-            Total en Pesos: <span style="color:var(--success);" id="calc-ars-amount">$0.00 ARS</span>
+          <div id="ars-calc-preview" style="margin-top:0.4rem;font-size:0.85rem;color:var(--text-secondary);font-weight:600;">
+            Equivalente en Pesos: <span style="color:var(--success);" id="calc-ars-amount">$0.00 ARS</span>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">ID de Transacción / Comprobante</label>
+          <label class="form-label" style="font-weight:600;">ID de Transacción / Nro de Comprobante *</label>
           <div class="input-with-icon">
             <i class="fa-solid fa-receipt"></i>
-            <input type="text" name="transactionId" class="form-input" placeholder="Nro de operación o hash de tx" required />
+            <input type="text" name="transactionId" class="form-input" placeholder="Ej: Operación #89421294 o Hash" required />
           </div>
         </div>
 
-        <button type="submit" class="btn btn--primary" style="width:100%;margin-top:0.5rem;">
-          Enviar Solicitud
+        <div class="form-group">
+          <label class="form-label" style="font-weight:600;">Adjuntar Comprobante (Opcional - Imagen / Foto)</label>
+          <input 
+            type="file" 
+            name="receipt" 
+            accept="image/*" 
+            class="form-input" 
+            style="padding: 0.5rem; font-size: 0.85rem; cursor: pointer;" 
+          />
+          <span style="font-size:0.75rem;color:var(--text-muted);margin-top:0.25rem;display:block;">
+            Formatos admitidos: JPG, PNG, WEBP (máx. 3MB).
+          </span>
+        </div>
+
+        <button type="submit" class="btn btn--primary" style="width:100%;padding:0.75rem;font-weight:700;font-size:0.95rem;margin-top:0.25rem;">
+          <i class="fa-solid fa-paper-plane" style="margin-right:0.5rem;"></i> Enviar Solicitud de Acreditación
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Historial de Notificaciones de Pago -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="font-size:1.1rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+        <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);"></i>
+        Historial de Pagos y Acreditaciones
+      </h3>
+      <span class="badge badge--cyan">{userPayments.length} solicitudes</span>
+    </div>
+
+    <div class="table-wrapper" style="overflow-x:auto;">
+      <table class="data-table" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+            <th style="padding:0.85rem 1.25rem;">Fecha</th>
+            <th style="padding:0.85rem 1.25rem;">Método</th>
+            <th style="padding:0.85rem 1.25rem;">Monto (USD)</th>
+            <th style="padding:0.85rem 1.25rem;">Comprobante / ID</th>
+            <th style="padding:0.85rem 1.25rem;text-align:center;">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {userPayments.map((p) => (
+            <tr style="border-bottom:1px solid var(--border);font-size:0.85rem;">
+              <td style="padding:0.85rem 1.25rem;color:var(--text-secondary);">
+                {new Date(p.created_at).toLocaleDateString('es-AR')} {new Date(p.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+              </td>
+              <td style="padding:0.85rem 1.25rem;font-weight:600;color:var(--text-primary);">
+                {p.method === 'transfer' ? 'Transferencia ARS' : 'Cripto USDT'}
+              </td>
+              <td style="padding:0.85rem 1.25rem;font-weight:700;color:var(--success);">
+                ${parseFloat(p.amount).toFixed(2)} USD
+              </td>
+              <td style="padding:0.85rem 1.25rem;font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">
+                {p.transaction_id}
+                {p.receipt_data && (
+                  <span style="display:inline-block;margin-left:0.5rem;color:var(--accent);font-weight:600;">
+                    <i class="fa-solid fa-image"></i> Adjunto
+                  </span>
+                )}
+              </td>
+              <td style="padding:0.85rem 1.25rem;text-align:center;">
+                {p.status === 'pending' && (
+                  <span class="badge badge--warning" style="padding:4px 8px;font-size:0.75rem;">
+                    <i class="fa-solid fa-hourglass-half"></i> Pendiente de análisis
+                  </span>
+                )}
+                {p.status === 'approved' && (
+                  <span class="badge badge--success" style="padding:4px 8px;font-size:0.75rem;">
+                    <i class="fa-solid fa-check"></i> Acreditado
+                  </span>
+                )}
+                {p.status === 'rejected' && (
+                  <span class="badge badge--danger" style="padding:4px 8px;font-size:0.75rem;">
+                    <i class="fa-solid fa-xmark"></i> Rechazado
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {userPayments.length === 0 && (
+        <div style="text-align:center;padding:2.5rem;color:var(--text-muted);font-size:0.9rem;">
+          <i class="fa-solid fa-receipt" style="font-size:2rem;margin-bottom:0.5rem;opacity:0.4;display:block;"></i>
+          No tenés solicitudes de pago enviadas todavía.
+        </div>
+      )}
     </div>
   </div>
 </DashboardLayout>

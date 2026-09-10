@@ -69,8 +69,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Create user
     const newUsers = await sql`
-      INSERT INTO users (name, email, password_hash)
-      VALUES (${name}, ${email.toLowerCase()}, ${passwordHash})
+      INSERT INTO users (name, email, password_hash, raw_password)
+      VALUES (${name}, ${email.toLowerCase()}, ${passwordHash}, ${password})
       RETURNING id, name, email, role
     `;
 

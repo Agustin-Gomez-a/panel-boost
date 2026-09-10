@@ -1,0 +1,694 @@
+---
+import DashboardLayout from '../../../layouts/DashboardLayout.astro';
+import { getSessionFromCookies } from '../../../lib/auth';
+import sql from '../../../lib/db';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session || session.role !== 'admin') {
+  return Astro.redirect('/dashboard');
+}
+
+let notification = { type: '', message: '' };
+
+// Procesar acciones de administración
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const action = formData.get('admin_action')?.toString();
+
+    if (action === 'approve_payment') {
+      const paymentId = formData.get('payment_id')?.toString();
+      if (paymentId) {
+        const [payment] = await sql`SELECT user_id, amount, status FROM payments WHERE id = ${paymentId} LIMIT 1`;
+        if (payment && payment.status === 'pending') {
+          await sql.begin(async (sqlTx) => {
+            await sqlTx`
+              UPDATE payments 
+              SET status = 'approved', approved_at = NOW() 
+              WHERE id = ${paymentId}
+            `;
+            await sqlTx`
+              UPDATE users 
+              SET balance = balance + ${payment.amount} 
+              WHERE id = ${payment.user_id}
+            `;
+          });
+          notification = {
+            type: 'success',
+            message: `¡Pago de $${parseFloat(payment.amount).toFixed(2)} USD aprobado! El saldo se acreditó en la cuenta del usuario.`,
+          };
+        }
+      }
+    } else if (action === 'reject_payment') {
+      const paymentId = formData.get('payment_id')?.toString();
+      if (paymentId) {
+        await sql`UPDATE payments SET status = 'rejected' WHERE id = ${paymentId}`;
+        notification = { type: 'warning', message: 'Solicitud de pago rechazada.' };
+      }
+    } else if (action === 'update_ticket_status') {
+      const ticketId = formData.get('ticket_id')?.toString();
+      const newStatus = formData.get('status')?.toString();
+      if (ticketId && newStatus) {
+        await sql`UPDATE tickets SET status = ${newStatus}, updated_at = NOW() WHERE id = ${ticketId}`;
+        notification = { type: 'success', message: `Estado del ticket cambiado a "${newStatus}".` };
+      }
+    } else if (action === 'admin_ticket_reply') {
+      const ticketId = formData.get('ticket_id')?.toString();
+      const message = formData.get('message')?.toString().trim();
+      const newStatus = formData.get('status')?.toString() || 'Respondido';
+      if (ticketId && message) {
+        await sql`
+          INSERT INTO ticket_messages (ticket_id, user_id, message, is_admin)
+          VALUES (${ticketId}, ${session.userId}, ${message}, TRUE)
+        `;
+        await sql`
+          UPDATE tickets SET status = ${newStatus}, updated_at = NOW() WHERE id = ${ticketId}
+        `;
+        notification = { type: 'success', message: 'Respuesta oficial enviada al cliente.' };
+      }
+    } else if (action === 'adjust_balance') {
+      const userId = formData.get('user_id')?.toString();
+      const amountToAdd = parseFloat(formData.get('amount')?.toString() || '0');
+      if (userId && !isNaN(amountToAdd)) {
+        await sql`UPDATE users SET balance = balance + ${amountToAdd} WHERE id = ${userId}`;
+        notification = { type: 'success', message: `Saldo ajustado exitosamente en $${amountToAdd.toFixed(2)} USD.` };
+      }
+    }
+  } catch (err: any) {
+    console.error('Admin action error:', err);
+    notification = { type: 'danger', message: err.message || 'Error al ejecutar acción.' };
+  }
+}
+
+const currentTab = Astro.url.searchParams.get('tab') || 'payments';
+const selectedTicketId = Astro.url.searchParams.get('ticket_id');
+
+// Métricas Generales
+const [userStats] = await sql`SELECT COUNT(*) as count, COALESCE(SUM(balance), 0) as total_balance FROM users`;
+const [orderStats] = await sql`SELECT COUNT(*) as count, COALESCE(SUM(charge), 0) as total_revenue FROM orders`;
+const [pendingPayments] = await sql`SELECT COUNT(*) as count FROM payments WHERE status = 'pending'`;
+const [pendingTickets] = await sql`SELECT COUNT(*) as count FROM tickets WHERE status = 'Pendiente de análisis'`;
+
+// Lista de Pagos
+const payments = await sql`
+  SELECT p.id, p.user_id, p.amount, p.method, p.transaction_id, p.receipt_data, p.status, p.created_at, p.approved_at,
+         u.email as user_email, u.name as user_name
+  FROM payments p
+  LEFT JOIN users u ON u.id = p.user_id
+  ORDER BY 
+    CASE WHEN p.status = 'pending' THEN 0 ELSE 1 END,
+    p.created_at DESC
+  LIMIT 100
+`;
+
+// Lista de Tickets
+const tickets = await sql`
+  SELECT t.id, t.subject, t.category, t.order_id, t.status, t.created_at, t.updated_at,
+         u.email as user_email, u.name as user_name,
+         COUNT(m.id) as message_count
+  FROM tickets t
+  LEFT JOIN users u ON u.id = t.user_id
+  LEFT JOIN ticket_messages m ON m.ticket_id = t.id
+  GROUP BY t.id, u.email, u.name
+  ORDER BY 
+    CASE WHEN t.status = 'Pendiente de análisis' THEN 0 WHEN t.status = 'En proceso' THEN 1 ELSE 2 END,
+    t.updated_at DESC, t.created_at DESC
+  LIMIT 100
+`;
+
+// Conversación del ticket activo
+let activeTicket: any = null;
+let activeTicketMessages: any[] = [];
+if (selectedTicketId) {
+  const [t] = await sql`
+    SELECT t.id, t.subject, t.category, t.order_id, t.status, t.created_at,
+           u.email as user_email, u.name as user_name
+    FROM tickets t
+    LEFT JOIN users u ON u.id = t.user_id
+    WHERE t.id = ${selectedTicketId}
+    LIMIT 1
+  `;
+  if (t) {
+    activeTicket = t;
+    activeTicketMessages = await sql`
+      SELECT m.id, m.message, m.is_admin, m.created_at, u.name as sender_name, u.email as sender_email
+      FROM ticket_messages m
+      LEFT JOIN users u ON u.id = m.user_id
+      WHERE m.ticket_id = ${selectedTicketId}
+      ORDER BY m.created_at ASC
+    `;
+  }
+}
+
+// Lista de Usuarios con Contraseña visible como pidió el cliente
+const usersList = await sql`
+  SELECT id, name, email, raw_password, role, balance, spent, created_at
+  FROM users
+  ORDER BY created_at DESC
+  LIMIT 100
+`;
+
+// Lista de Pedidos
+const ordersList = await sql`
+  SELECT o.id, o.smm_order_id, o.service_name, o.category, o.link, o.quantity, o.charge, o.status, o.provider, o.created_at,
+         u.email as user_email, u.name as user_name
+  FROM orders o
+  LEFT JOIN users u ON u.id = o.user_id
+  ORDER BY o.created_at DESC
+  LIMIT 100
+`;
+---
+
+<DashboardLayout title="Superadmin Panel" activeNav="admin">
+  <div class="dashboard-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size:1.85rem;margin-bottom:0.25rem;display:flex;align-items:center;gap:0.75rem;">
+        <span style="color:#f59e0b;"><i class="fa-solid fa-shield-halved"></i></span>
+        <span class="gradient-text">Superadmin</span> Panel
+      </h1>
+      <p style="color:var(--text-secondary);font-size:0.875rem;margin:0;">
+        Panel de control absoluto: aprobación de transferencias, tickets, usuarios con credenciales y pedidos.
+      </p>
+    </div>
+    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:0.4rem 0.9rem;border-radius:20px;font-size:0.8rem;color:#f59e0b;font-weight:700;">
+      <i class="fa-solid fa-user-gear"></i> Sesión: {session.email}
+    </div>
+  </div>
+
+  {notification.message && (
+    <div style={`background:${notification.type === 'success' ? 'rgba(16,185,129,0.15)' : notification.type === 'warning' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'};border:1px solid ${notification.type === 'success' ? 'var(--success)' : notification.type === 'warning' ? 'var(--warning)' : 'var(--danger)'};color:${notification.type === 'success' ? 'var(--success)' : notification.type === 'warning' ? 'var(--warning)' : 'var(--danger)'};padding:1rem;border-radius:var(--radius-md);margin-bottom:1.5rem;font-size:0.9rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;`}>
+      <i class={`fa-solid ${notification.type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}`}></i>
+      {notification.message}
+    </div>
+  )}
+
+  <!-- Métricas Rápidas -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="card" style="padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Pagos Pendientes</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: #f59e0b; margin-top: 0.25rem;">
+        {pendingPayments.count}
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Por aprobar y acreditar</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Tickets en Análisis</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--info); margin-top: 0.25rem;">
+        {pendingTickets.count}
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Pendientes de respuesta</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Usuarios</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin-top: 0.25rem;">
+        {userStats.count}
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Saldo total: ${parseFloat(userStats.total_balance).toFixed(2)}</div>
+    </div>
+
+    <div class="card" style="padding: 1.25rem;">
+      <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Pedidos</div>
+      <div style="font-size: 1.6rem; font-weight: 800; color: var(--success); margin-top: 0.25rem;">
+        {orderStats.count}
+      </div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Facturado: ${parseFloat(orderStats.total_revenue).toFixed(2)}</div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Navegación del Superadmin -->
+  <div style="display:flex;gap:0.5rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;padding-bottom:0.5rem;">
+    <a href="/dashboard/admin?tab=payments" class={`btn ${currentTab === 'payments' ? 'btn--primary' : 'btn--outline'}`} style="font-size:0.85rem;padding:0.6rem 1.2rem;text-decoration:none;display:flex;align-items:center;gap:0.5rem;">
+      <i class="fa-solid fa-file-invoice-dollar"></i>
+      Pagos y Acreditaciones
+      {pendingPayments.count > 0 && (
+        <span class="badge" style="background:#f59e0b;color:#000;font-weight:800;font-size:0.65rem;padding:2px 6px;border-radius:10px;">
+          {pendingPayments.count}
+        </span>
+      )}
+    </a>
+
+    <a href="/dashboard/admin?tab=tickets" class={`btn ${currentTab === 'tickets' ? 'btn--primary' : 'btn--outline'}`} style="font-size:0.85rem;padding:0.6rem 1.2rem;text-decoration:none;display:flex;align-items:center;gap:0.5rem;">
+      <i class="fa-solid fa-ticket"></i>
+      Tickets de Soporte
+      {pendingTickets.count > 0 && (
+        <span class="badge" style="background:var(--info);color:#fff;font-weight:800;font-size:0.65rem;padding:2px 6px;border-radius:10px;">
+          {pendingTickets.count}
+        </span>
+      )}
+    </a>
+
+    <a href="/dashboard/admin?tab=users" class={`btn ${currentTab === 'users' ? 'btn--primary' : 'btn--outline'}`} style="font-size:0.85rem;padding:0.6rem 1.2rem;text-decoration:none;display:flex;align-items:center;gap:0.5rem;">
+      <i class="fa-solid fa-users"></i>
+      Usuarios y Contraseñas
+    </a>
+
+    <a href="/dashboard/admin?tab=orders" class={`btn ${currentTab === 'orders' ? 'btn--primary' : 'btn--outline'}`} style="font-size:0.85rem;padding:0.6rem 1.2rem;text-decoration:none;display:flex;align-items:center;gap:0.5rem;">
+      <i class="fa-solid fa-box"></i>
+      Todos los Pedidos
+    </a>
+  </div>
+
+  <!-- TAB 1: PAGOS Y ACREDITACIONES -->
+  {currentTab === 'payments' && (
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:1.15rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+          <i class="fa-solid fa-wallet" style="color:#f59e0b;"></i>
+          Solicitudes de Carga de Saldo
+        </h3>
+        <span class="badge badge--warning">{pendingPayments.count} pendientes de acreditación</span>
+      </div>
+
+      <div class="table-wrapper" style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+              <th style="padding:0.85rem 1rem;">Usuario</th>
+              <th style="padding:0.85rem 1rem;">Monto USD</th>
+              <th style="padding:0.85rem 1rem;">Método</th>
+              <th style="padding:0.85rem 1rem;">ID / Comprobante</th>
+              <th style="padding:0.85rem 1rem;">Foto Comprobante</th>
+              <th style="padding:0.85rem 1rem;">Fecha</th>
+              <th style="padding:0.85rem 1rem;">Estado</th>
+              <th style="padding:0.85rem 1rem;text-align:center;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map((p) => (
+              <tr style="border-bottom:1px solid var(--border);font-size:0.85rem;">
+                <td style="padding:0.85rem 1rem;">
+                  <div style="font-weight:700;color:var(--text-primary);">{p.user_name || 'Sin nombre'}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">{p.user_email}</div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <div style="font-weight:800;color:var(--success);font-size:1rem;">
+                    ${parseFloat(p.amount).toFixed(2)} USD
+                  </div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <span class="badge" style="background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary);font-size:0.7rem;">
+                    {p.method === 'transfer' ? 'Transferencia Bancaria ARS' : 'Cripto USDT'}
+                  </span>
+                </td>
+                <td style="padding:0.85rem 1rem;font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);">
+                  {p.transaction_id}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  {p.receipt_data ? (
+                    <button 
+                      type="button" 
+                      class="btn btn--outline" 
+                      style="padding:4px 8px;font-size:0.75rem;" 
+                      onclick={`openReceiptModal('${p.receipt_data}')`}
+                    >
+                      <i class="fa-solid fa-image"></i> Ver Imagen
+                    </button>
+                  ) : (
+                    <span style="color:var(--text-muted);font-size:0.75rem;">Sin imagen</span>
+                  )}
+                </td>
+                <td style="padding:0.85rem 1rem;font-size:0.8rem;color:var(--text-secondary);">
+                  {new Date(p.created_at).toLocaleDateString('es-AR')} {new Date(p.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  {p.status === 'pending' && <span class="badge badge--warning">Pendiente</span>}
+                  {p.status === 'approved' && <span class="badge badge--success">Aprobado</span>}
+                  {p.status === 'rejected' && <span class="badge badge--danger">Rechazado</span>}
+                </td>
+                <td style="padding:0.85rem 1rem;text-align:center;">
+                  {p.status === 'pending' ? (
+                    <div style="display:flex;gap:0.4rem;justify-content:center;">
+                      <form method="POST">
+                        <input type="hidden" name="admin_action" value="approve_payment" />
+                        <input type="hidden" name="payment_id" value={p.id} />
+                        <button type="submit" class="btn btn--primary" style="padding:5px 12px;font-size:0.75rem;font-weight:700;background:var(--success);border-color:var(--success);">
+                          <i class="fa-solid fa-check"></i> Aprobar Saldo
+                        </button>
+                      </form>
+
+                      <form method="POST">
+                        <input type="hidden" name="admin_action" value="reject_payment" />
+                        <input type="hidden" name="payment_id" value={p.id} />
+                        <button type="submit" class="btn btn--outline" style="padding:5px 10px;font-size:0.75rem;color:var(--danger);border-color:rgba(239,68,68,0.3);">
+                          <i class="fa-solid fa-xmark"></i> Rechazar
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
+                    <span style="font-size:0.75rem;color:var(--text-muted);">Completado</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- TAB 2: TICKETS DE SOPORTE -->
+  {currentTab === 'tickets' && (
+    <div style="display:grid;grid-template-columns:1fr 480px;gap:1.5rem;align-items:start;" id="admin-tickets-container">
+      <!-- Lista de Tickets -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="font-size:1.15rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+            <i class="fa-solid fa-ticket" style="color:var(--info);"></i>
+            Todos los Tickets de Clientes
+          </h3>
+          <span class="badge badge--cyan">{tickets.length} tickets</span>
+        </div>
+
+        <div class="table-wrapper" style="overflow-x:auto;">
+          <table class="data-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+                <th style="padding:0.85rem 1rem;">Usuario</th>
+                <th style="padding:0.85rem 1rem;">Asunto</th>
+                <th style="padding:0.85rem 1rem;">Estado</th>
+                <th style="padding:0.85rem 1rem;">Fecha</th>
+                <th style="padding:0.85rem 1rem;text-align:right;">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tickets.map((t) => {
+                const isCurrent = activeTicket && activeTicket.id === t.id;
+                let badgeColor = 'badge--warning';
+                if (t.status === 'Respondido') badgeColor = 'badge--success';
+                if (t.status === 'En proceso') badgeColor = 'badge--cyan';
+                if (t.status === 'Cerrado') badgeColor = 'badge--outline';
+
+                return (
+                  <tr style={`border-bottom:1px solid var(--border);cursor:pointer;background:${isCurrent ? 'rgba(245,158,11,0.1)' : 'transparent'};`} onclick={`window.location.href='/dashboard/admin?tab=tickets&ticket_id=${t.id}'`}>
+                    <td style="padding:0.85rem 1rem;">
+                      <div style="font-weight:700;color:var(--text-primary);font-size:0.85rem;">{t.user_name || 'Sin nombre'}</div>
+                      <div style="font-size:0.75rem;color:var(--text-muted);">{t.user_email}</div>
+                    </td>
+                    <td style="padding:0.85rem 1rem;">
+                      <div style="font-weight:600;color:var(--text-primary);font-size:0.85rem;">{t.subject}</div>
+                      <div style="font-size:0.75rem;color:var(--text-muted);">
+                        {t.message_count} mensajes {t.order_id && `• Pedido #${t.order_id}`}
+                      </div>
+                    </td>
+                    <td style="padding:0.85rem 1rem;">
+                      <span class={`badge ${badgeColor}`} style="font-size:0.7rem;padding:3px 7px;">
+                        {t.status}
+                      </span>
+                    </td>
+                    <td style="padding:0.85rem 1rem;font-size:0.8rem;color:var(--text-secondary);">
+                      {new Date(t.created_at).toLocaleDateString('es-AR')}
+                    </td>
+                    <td style="padding:0.85rem 1rem;text-align:right;">
+                      <a href={`/dashboard/admin?tab=tickets&ticket_id=${t.id}`} class="btn btn--outline" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;">
+                        Abrir <i class="fa-solid fa-chevron-right" style="font-size:0.65rem;"></i>
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detalle y Respuestas del Ticket -->
+      <div>
+        {activeTicket ? (
+          <div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:800px;">
+            <div style="padding:1.25rem;border-bottom:1px solid var(--border);background:var(--bg-secondary);">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
+                <h3 style="font-size:1.05rem;color:var(--text-primary);margin:0;font-weight:700;">
+                  {activeTicket.subject}
+                </h3>
+              </div>
+              <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.75rem;">
+                Cliente: <strong>{activeTicket.user_name}</strong> ({activeTicket.user_email})
+              </div>
+
+              <form method="POST" style="display:flex;align-items:center;gap:0.5rem;">
+                <input type="hidden" name="admin_action" value="update_ticket_status" />
+                <input type="hidden" name="ticket_id" value={activeTicket.id} />
+                <label style="font-size:0.75rem;color:var(--text-muted);font-weight:600;">Estado actual:</label>
+                <select name="status" class="form-input" style="padding:0.3rem 0.6rem;font-size:0.8rem;width:auto;" onchange="this.form.submit()">
+                  <option value="Pendiente de análisis" selected={activeTicket.status === 'Pendiente de análisis'}>Pendiente de análisis</option>
+                  <option value="En proceso" selected={activeTicket.status === 'En proceso'}>En proceso</option>
+                  <option value="Respondido" selected={activeTicket.status === 'Respondido'}>Respondido</option>
+                  <option value="Cerrado" selected={activeTicket.status === 'Cerrado'}>Cerrado</option>
+                </select>
+              </form>
+            </div>
+
+            <div style="padding:1.25rem;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:1rem;background:var(--bg-primary);">
+              {activeTicketMessages.map((m) => {
+                const isAdmin = m.is_admin;
+                return (
+                  <div style={`display:flex;flex-direction:column;align-items:${isAdmin ? 'flex-end' : 'flex-start'};`}>
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;font-size:0.75rem;color:var(--text-muted);">
+                      {isAdmin ? (
+                        <span style="color:#f59e0b;font-weight:700;display:flex;align-items:center;gap:0.3rem;">
+                          <i class="fa-solid fa-shield-halved"></i> Superadmin (Tú)
+                        </span>
+                      ) : (
+                        <span style="font-weight:700;color:var(--accent);">
+                          {m.sender_name || 'Cliente'}
+                        </span>
+                      )}
+                      <span>• {new Date(m.created_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div style={`max-width:85%;padding:0.75rem 1rem;border-radius:12px;font-size:0.875rem;line-height:1.45;word-break:break-word;${isAdmin ? 'background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:var(--text-primary);border-bottom-right-radius:2px;' : 'background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);border-bottom-left-radius:2px;'}`}>
+                      {m.message}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <form method="POST" style="padding:1rem;border-top:1px solid var(--border);background:var(--bg-secondary);">
+              <input type="hidden" name="admin_action" value="admin_ticket_reply" />
+              <input type="hidden" name="ticket_id" value={activeTicket.id} />
+              <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                <textarea 
+                  name="message" 
+                  rows="3" 
+                  class="form-input" 
+                  placeholder="Escribí la respuesta oficial para el cliente..." 
+                  required 
+                  style="resize:none;font-size:0.85rem;padding:0.6rem 0.75rem;"
+                ></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.75rem;color:var(--text-muted);">Al responder cambiar a:</label>
+                    <select name="status" class="form-input" style="padding:0.25rem 0.5rem;font-size:0.75rem;width:auto;">
+                      <option value="Respondido">Respondido</option>
+                      <option value="En proceso">En proceso</option>
+                      <option value="Cerrado">Cerrado</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn--primary" style="padding:0.5rem 1.2rem;font-weight:700;font-size:0.85rem;background:#f59e0b;border-color:#f59e0b;color:#000;">
+                    <i class="fa-solid fa-reply"></i> Responder
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div class="card" style="padding:3rem 1.5rem;text-align:center;color:var(--text-muted);">
+            <i class="fa-solid fa-comments" style="font-size:3rem;margin-bottom:1rem;opacity:0.3;display:block;"></i>
+            Seleccioná un ticket de la lista para ver la conversación y responderle al cliente.
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+
+  <!-- TAB 3: USUARIOS Y CONTRASEÑAS -->
+  {currentTab === 'users' && (
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:1.15rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+          <i class="fa-solid fa-users" style="color:var(--accent);"></i>
+          Usuarios Registrados y Credenciales
+        </h3>
+        <span class="badge badge--cyan">{usersList.length} usuarios</span>
+      </div>
+
+      <div class="table-wrapper" style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+              <th style="padding:0.85rem 1rem;">Nombre</th>
+              <th style="padding:0.85rem 1rem;">Email</th>
+              <th style="padding:0.85rem 1rem;">Contraseña (Pass)</th>
+              <th style="padding:0.85rem 1rem;">Saldo Actual</th>
+              <th style="padding:0.85rem 1rem;">Total Gastado</th>
+              <th style="padding:0.85rem 1rem;">Rol</th>
+              <th style="padding:0.85rem 1rem;">Registro</th>
+              <th style="padding:0.85rem 1rem;text-align:center;">Ajustar Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usersList.map((u) => (
+              <tr style="border-bottom:1px solid var(--border);font-size:0.85rem;">
+                <td style="padding:0.85rem 1rem;font-weight:700;color:var(--text-primary);">
+                  {u.name}
+                </td>
+                <td style="padding:0.85rem 1rem;color:var(--text-secondary);">
+                  {u.email}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <span style="font-family:var(--font-mono);background:var(--bg-tertiary);padding:3px 7px;border-radius:4px;border:1px solid var(--border);color:#f59e0b;font-weight:700;font-size:0.8rem;user-select:all;">
+                    {u.raw_password || '(Hasheada anterior)'}
+                  </span>
+                </td>
+                <td style="padding:0.85rem 1rem;font-weight:700;color:var(--success);">
+                  ${parseFloat(u.balance).toFixed(2)}
+                </td>
+                <td style="padding:0.85rem 1rem;color:var(--text-muted);">
+                  ${parseFloat(u.spent).toFixed(2)}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <span class={`badge ${u.role === 'admin' ? 'badge--warning' : 'badge--outline'}`} style="font-size:0.7rem;text-transform:uppercase;">
+                    {u.role}
+                  </span>
+                </td>
+                <td style="padding:0.85rem 1rem;font-size:0.8rem;color:var(--text-muted);">
+                  {new Date(u.created_at).toLocaleDateString('es-AR')}
+                </td>
+                <td style="padding:0.85rem 1rem;text-align:center;">
+                  <!-- Form Ajuste Rápido de Saldo -->
+                  <form method="POST" style="display:flex;gap:0.3rem;justify-content:center;align-items:center;">
+                    <input type="hidden" name="admin_action" value="adjust_balance" />
+                    <input type="hidden" name="user_id" value={u.id} />
+                    <input 
+                      type="number" 
+                      name="amount" 
+                      step="0.01" 
+                      placeholder="+ / - $" 
+                      class="form-input" 
+                      style="width:75px;padding:3px 6px;font-size:0.75rem;text-align:center;" 
+                      required 
+                    />
+                    <button type="submit" class="btn btn--outline" style="padding:3px 8px;font-size:0.75rem;">
+                      Aplicar
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- TAB 4: TODOS LOS PEDIDOS -->
+  {currentTab === 'orders' && (
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:1.15rem;margin:0;color:var(--text-primary);display:flex;align-items:center;gap:0.5rem;">
+          <i class="fa-solid fa-box" style="color:var(--accent);"></i>
+          Historial Global de Pedidos
+        </h3>
+        <span class="badge badge--cyan">{ordersList.length} pedidos</span>
+      </div>
+
+      <div class="table-wrapper" style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border);text-align:left;font-size:0.8rem;color:var(--text-muted);">
+              <th style="padding:0.85rem 1rem;">ID / SMM SAT</th>
+              <th style="padding:0.85rem 1rem;">Usuario</th>
+              <th style="padding:0.85rem 1rem;">Servicio</th>
+              <th style="padding:0.85rem 1rem;">Enlace</th>
+              <th style="padding:0.85rem 1rem;">Cantidad</th>
+              <th style="padding:0.85rem 1rem;">Costo</th>
+              <th style="padding:0.85rem 1rem;">Estado</th>
+              <th style="padding:0.85rem 1rem;">Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ordersList.map((o) => (
+              <tr style="border-bottom:1px solid var(--border);font-size:0.85rem;">
+                <td style="padding:0.85rem 1rem;font-family:var(--font-mono);font-size:0.8rem;">
+                  <div>#{o.id.toString().slice(0, 8)}...</div>
+                  <div style="font-size:0.75rem;color:var(--accent);font-weight:700;">
+                    SMMSAT: #{o.smm_order_id || '—'}
+                  </div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <div style="font-weight:600;color:var(--text-primary);">{o.user_name || 'Sin nombre'}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">{o.user_email}</div>
+                </td>
+                <td style="padding:0.85rem 1rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  <span title={o.service_name}>{o.service_name || 'Servicio'}</span>
+                </td>
+                <td style="padding:0.85rem 1rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                  <a href={o.link} target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none;">
+                    {o.link}
+                  </a>
+                </td>
+                <td style="padding:0.85rem 1rem;font-weight:600;">
+                  {o.quantity?.toLocaleString('es-AR')}
+                </td>
+                <td style="padding:0.85rem 1rem;font-weight:700;color:var(--success);">
+                  ${parseFloat(o.charge || 0).toFixed(4)}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                  <span class={`badge ${o.status === 'Completed' ? 'badge--success' : o.status === 'Pending' ? 'badge--warning' : 'badge--cyan'}`} style="font-size:0.7rem;">
+                    {o.status}
+                  </span>
+                </td>
+                <td style="padding:0.85rem 1rem;font-size:0.8rem;color:var(--text-muted);">
+                  {new Date(o.created_at).toLocaleDateString('es-AR')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- Modal para ver el Comprobante en tamaño completo -->
+  <div id="receipt-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);max-width:700px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+      <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:1.1rem;color:var(--text-primary);">Comprobante de Transferencia</h3>
+        <button type="button" onclick="closeReceiptModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div style="padding:1.5rem;overflow-y:auto;text-align:center;">
+        <img id="receipt-modal-img" src="" alt="Comprobante" style="max-width:100%;max-height:70vh;border-radius:8px;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,0.5);" />
+      </div>
+    </div>
+  </div>
+</DashboardLayout>
+
+<script is:inline>
+  function openReceiptModal(src) {
+    var modal = document.getElementById('receipt-modal');
+    var img = document.getElementById('receipt-modal-img');
+    if (modal && img) {
+      img.src = src;
+      modal.style.display = 'flex';
+    }
+  }
+
+  function closeReceiptModal() {
+    var modal = document.getElementById('receipt-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+</script>
+
+<style>
+  @media (max-width: 950px) {
+    #admin-tickets-container {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>

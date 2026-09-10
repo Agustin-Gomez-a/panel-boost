@@ -80,8 +80,15 @@ const { title = 'Dashboard', activeNav = 'dashboard' } = Astro.props;
           </a>
           <a href="/dashboard/tickets" class={`sidebar__nav-link ${activeNav === 'tickets' ? 'active' : ''}`}>
             <i class="fa-solid fa-ticket"></i>
-            Tickets <span class="badge badge--warning" style="margin-left:auto;font-size:0.6rem;padding:2px 5px;">1</span>
+            Tickets
           </a>
+          {session.role === 'admin' && (
+            <a href="/dashboard/admin" class={`sidebar__nav-link ${activeNav === 'admin' ? 'active' : ''}`} style="margin-top:0.75rem;border:1px solid rgba(245, 158, 11, 0.4);background:rgba(245, 158, 11, 0.08);color:#f59e0b;font-weight:600;">
+              <i class="fa-solid fa-shield-halved"></i>
+              Superadmin
+              <span class="badge" style="background:#f59e0b;color:#000;font-size:0.6rem;padding:2px 6px;margin-left:auto;font-weight:700;border-radius:4px;">PANEL</span>
+            </a>
+          )}
         </nav>
 
         <div class="sidebar__footer">
